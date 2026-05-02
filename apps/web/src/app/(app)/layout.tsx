@@ -7,6 +7,8 @@ import { useAuth } from '@/lib/auth-context';
 
 const NAV = [
   { href: '/students', label: 'Alumnos' },
+  { href: '/teachers', label: 'Profesores' },
+  { href: '/courses', label: 'Cursos' },
   { href: '/groups', label: 'Grupos' },
   { href: '/me', label: 'Mi cuenta' },
 ];
