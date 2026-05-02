@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: API e2e + web typecheck
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: acedesoft
+          POSTGRES_PASSWORD: acedesoft
+          POSTGRES_DB: acedesoft_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma:generate
+
+      - name: Apply migrations to test database
+        working-directory: apps/api
+        run: pnpm test:db:migrate
+
+      - name: Build API
+        working-directory: apps/api
+        run: pnpm build
+
+      - name: Run API e2e tests
+        working-directory: apps/api
+        run: pnpm test:e2e
+
+      - name: Typecheck web
+        working-directory: apps/web
+        run: pnpm exec tsc --noEmit
