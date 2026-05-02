@@ -112,6 +112,7 @@ Ejemplos:
 - [x] **UI de `groups` + detalle con inscripciones** — `/groups` (lista + form, filtro por curso) y `/groups/[id]` (info + alta/baja/cambio de estado de alumnos)
 - [x] **Gestión de sesiones en detalle de grupo** — `/groups/[id]` ahora incluye sección "Sesiones" con CRUD inline (datetime-local, profesor pre-poblado del grupo)
 - [x] **UI de detalle de sesión + asistencia** — `/sessions/[id]` con tabla de asistencia (PRESENT por defecto), bulk save atómico, cambio de estado de la sesión
+- [x] **UI CRUD `/teachers` y `/courses`** — completa el catálogo de mantenimiento del tenant; cierra el agujero de "no se puede operar sin curl"
 - [x] **Testing infra (e2e)** — Jest + Supertest + BD `acedesoft_test`, primer suite cubre auth completo
 - [x] **Módulo `students`** — CRUD con tenant scoping + suite e2e (incl. test de aislamiento entre tenants)
 - [x] **Módulo `teachers`** — mismo patrón, CRUD + e2e
