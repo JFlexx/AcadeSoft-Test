@@ -1,0 +1,365 @@
+// AcadeSoft — MVP data model
+// Multi-tenant SaaS for academy management.
+// Row-level tenant isolation: every business entity carries tenantId.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+  PENDING
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  OTHER
+}
+
+// ─── Tenant ───────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String       @unique
+  logoUrl   String?
+  status    TenantStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  users     User[]
+  students  Student[]
+  teachers  Teacher[]
+  courses   Course[]
+  groups    Group[]
+  sessions  Session[]
+  invoices  Invoice[]
+  auditLogs AuditLog[]
+
+  @@map("tenants")
+}
+
+// ─── Role & User ──────────────────────────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  tenantId     String
+  roleId       String
+  email        String
+  passwordHash String
+  firstName    String
+  lastName     String
+  status       UserStatus @default(ACTIVE)
+  refreshToken String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role      Role       @relation(fields: [roleId], references: [id])
+  auditLogs AuditLog[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+// ─── Student & Guardian ───────────────────────────────────────────────────────
+
+model Student {
+  id        String    @id @default(cuid())
+  tenantId  String
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  birthDate DateTime?
+  gender    Gender?
+  address   String?
+  photoUrl  String?
+  notes     String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  guardians   Guardian[]
+  enrollments Enrollment[]
+  attendances Attendance[]
+  invoices    Invoice[]
+
+  @@index([tenantId])
+  @@index([tenantId, lastName, firstName])
+  @@map("students")
+}
+
+model Guardian {
+  id           String   @id @default(cuid())
+  studentId    String
+  firstName    String
+  lastName     String
+  relationship String
+  email        String?
+  phone        String?
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@map("guardians")
+}
+
+// ─── Teacher ──────────────────────────────────────────────────────────────────
+
+model Teacher {
+  id        String   @id @default(cuid())
+  tenantId  String
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  bio       String?
+  photoUrl  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  groups   Group[]
+  sessions Session[]
+
+  @@index([tenantId])
+  @@map("teachers")
+}
+
+// ─── Course & Group ───────────────────────────────────────────────────────────
+
+model Course {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  color       String?  @default("#6366f1")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  groups Group[]
+
+  @@index([tenantId])
+  @@map("courses")
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  tenantId    String
+  courseId    String
+  teacherId   String?
+  name        String
+  description String?
+  schedule    Json?
+  startDate   DateTime?
+  endDate     DateTime?
+  maxCapacity Int?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  course      Course       @relation(fields: [courseId], references: [id])
+  teacher     Teacher?     @relation(fields: [teacherId], references: [id])
+  enrollments Enrollment[]
+  sessions    Session[]
+
+  @@index([tenantId])
+  @@index([courseId])
+  @@map("groups")
+}
+
+// ─── Enrollment ───────────────────────────────────────────────────────────────
+
+model Enrollment {
+  id         String           @id @default(cuid())
+  studentId  String
+  groupId    String
+  status     EnrollmentStatus @default(ACTIVE)
+  enrolledAt DateTime         @default(now())
+  droppedAt  DateTime?
+  notes      String?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  group   Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, groupId])
+  @@index([groupId])
+  @@map("enrollments")
+}
+
+// ─── Session & Attendance ─────────────────────────────────────────────────────
+
+model Session {
+  id          String        @id @default(cuid())
+  tenantId    String
+  groupId     String
+  teacherId   String?
+  scheduledAt DateTime
+  startedAt   DateTime?
+  endedAt     DateTime?
+  status      SessionStatus @default(SCHEDULED)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teacher     Teacher?     @relation(fields: [teacherId], references: [id])
+  attendances Attendance[]
+
+  @@index([tenantId, scheduledAt])
+  @@index([groupId])
+  @@map("sessions")
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  sessionId String
+  studentId String
+  status    AttendanceStatus @default(PRESENT)
+  notes     String?
+  markedAt  DateTime         @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+  @@map("attendances")
+}
+
+// ─── Invoice & Payment ────────────────────────────────────────────────────────
+
+model Invoice {
+  id          String        @id @default(cuid())
+  tenantId    String
+  studentId   String
+  number      String
+  description String?
+  amount      Decimal       @db.Decimal(10, 2)
+  dueDate     DateTime?
+  status      InvoiceStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student  Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([studentId])
+  @@map("invoices")
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  invoiceId String
+  amount    Decimal       @db.Decimal(10, 2)
+  method    PaymentMethod @default(CASH)
+  paidAt    DateTime      @default(now())
+  reference String?
+  notes     String?
+  createdAt DateTime      @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+// ─── AuditLog ─────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  oldData    Json?
+  newData    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
