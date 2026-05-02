@@ -540,7 +540,11 @@ export default function GroupDetailPage() {
                 const t = s.teacherId ? teacherById[s.teacherId] : null;
                 return (
                   <tr key={s.id} className="border-b hover:bg-gray-50">
-                    <td className="py-2">{formatDateTime(s.scheduledAt)}</td>
+                    <td className="py-2">
+                      <Link href={`/sessions/${s.id}`} className="hover:underline">
+                        {formatDateTime(s.scheduledAt)}
+                      </Link>
+                    </td>
                     <td className="py-2 text-gray-600">
                       {t ? `${t.firstName} ${t.lastName}` : '—'}
                     </td>
