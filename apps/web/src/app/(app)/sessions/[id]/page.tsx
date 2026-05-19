@@ -295,7 +295,7 @@ export default function SessionDetailPage() {
               <button
                 onClick={handleSaveAttendance}
                 disabled={saving}
-                className="bg-black text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                className="btn-primary"
               >
                 {saving ? 'Guardando…' : 'Guardar asistencia'}
               </button>

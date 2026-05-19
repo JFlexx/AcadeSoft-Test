@@ -3,14 +3,23 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import {
+  Users,
+  GraduationCap,
+  BookOpen,
+  Users2,
+  CircleUser,
+  LogOut,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
-const NAV = [
-  { href: '/students', label: 'Alumnos' },
-  { href: '/teachers', label: 'Profesores' },
-  { href: '/courses', label: 'Cursos' },
-  { href: '/groups', label: 'Grupos' },
-  { href: '/me', label: 'Mi cuenta' },
+const NAV: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/students', label: 'Alumnos', icon: Users },
+  { href: '/teachers', label: 'Profesores', icon: GraduationCap },
+  { href: '/courses', label: 'Cursos', icon: BookOpen },
+  { href: '/groups', label: 'Grupos', icon: Users2 },
+  { href: '/me', label: 'Mi cuenta', icon: CircleUser },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -38,24 +47,37 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-56 border-r bg-gray-50 flex flex-col">
-        <div className="p-4 border-b">
-          <p className="font-semibold">AcadeSoft</p>
-          <p className="text-xs text-gray-500 truncate">{user.tenant.name}</p>
+    <div className="min-h-screen flex bg-gray-50">
+      <aside className="w-60 border-r bg-white flex flex-col">
+        <div className="px-4 py-5 border-b">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-brand-600 text-white font-bold text-sm">
+              A
+            </span>
+            <div className="min-w-0">
+              <p className="font-semibold leading-tight">AcadeSoft</p>
+              <p className="text-xs text-gray-500 truncate">{user.tenant.name}</p>
+            </div>
+          </div>
         </div>
-        <nav className="flex-1 p-2 space-y-1">
+        <nav className="flex-1 p-2 space-y-0.5">
           {NAV.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(item.href + '/');
+            const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block px-3 py-2 rounded text-sm ${
-                  active ? 'bg-black text-white' : 'hover:bg-gray-200'
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
+                  active
+                    ? 'bg-brand-50 text-brand-700 font-medium'
+                    : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
+                <Icon
+                  className={`h-4 w-4 ${active ? 'text-brand-600' : 'text-gray-400'}`}
+                />
                 {item.label}
               </Link>
             );
@@ -65,8 +87,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <button
             onClick={handleLogout}
             disabled={signingOut}
-            className="w-full px-3 py-2 text-sm text-left hover:bg-gray-200 rounded disabled:opacity-50"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-50 transition-colors"
           >
+            <LogOut className="h-4 w-4 text-gray-400" />
             {signingOut ? 'Cerrando…' : 'Cerrar sesión'}
           </button>
         </div>
