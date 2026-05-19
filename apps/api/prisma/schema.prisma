@@ -54,6 +54,7 @@ enum AttendanceStatus {
 enum InvoiceStatus {
   DRAFT
   PENDING
+  PARTIAL
   PAID
   OVERDUE
   CANCELLED
@@ -69,13 +70,15 @@ enum PaymentMethod {
 // ─── Tenant ───────────────────────────────────────────────────────────────────
 
 model Tenant {
-  id        String       @id @default(cuid())
-  name      String
-  slug      String       @unique
-  logoUrl   String?
-  status    TenantStatus @default(ACTIVE)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  name           String
+  slug           String       @unique
+  logoUrl        String?
+  status         TenantStatus @default(ACTIVE)
+  invoicePrefix  String       @default("F")
+  invoiceCounter Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   users     User[]
   students  Student[]
@@ -84,6 +87,7 @@ model Tenant {
   groups    Group[]
   sessions  Session[]
   invoices  Invoice[]
+  payments  Payment[]
   auditLogs AuditLog[]
 
   @@map("tenants")
@@ -309,7 +313,10 @@ model Invoice {
   studentId   String
   number      String
   description String?
+  notes       String?
   amount      Decimal       @db.Decimal(10, 2)
+  paidAmount  Decimal       @db.Decimal(10, 2) @default(0)
+  issueDate   DateTime      @default(now())
   dueDate     DateTime?
   status      InvoiceStatus @default(PENDING)
   createdAt   DateTime      @default(now())
@@ -321,12 +328,14 @@ model Invoice {
 
   @@unique([tenantId, number])
   @@index([tenantId, status])
+  @@index([tenantId, issueDate])
   @@index([studentId])
   @@map("invoices")
 }
 
 model Payment {
   id        String        @id @default(cuid())
+  tenantId  String
   invoiceId String
   amount    Decimal       @db.Decimal(10, 2)
   method    PaymentMethod @default(CASH)
@@ -335,8 +344,10 @@ model Payment {
   notes     String?
   createdAt DateTime      @default(now())
 
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([invoiceId])
   @@map("payments")
 }
