@@ -117,7 +117,7 @@ export default function CoursesPage() {
         {!showForm && (
           <button
             onClick={startCreate}
-            className="bg-black text-white text-sm px-3 py-2 rounded"
+            className="btn-primary"
           >
             + Nuevo curso
           </button>
@@ -170,14 +170,14 @@ export default function CoursesPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="bg-black text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+              className="btn-primary"
             >
               {submitting ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear'}
             </button>
             <button
               type="button"
               onClick={cancel}
-              className="border text-sm px-3 py-2 rounded"
+              className="btn-secondary"
             >
               Cancelar
             </button>

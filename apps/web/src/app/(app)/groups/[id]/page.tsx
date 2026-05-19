@@ -341,7 +341,7 @@ export default function GroupDetailPage() {
                 setEnrollError(null);
               }}
               disabled={availableStudents.length === 0}
-              className="bg-black text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+              className="btn-primary"
               title={availableStudents.length === 0 ? 'No hay alumnos sin inscribir' : ''}
             >
               + Inscribir alumno
@@ -370,7 +370,7 @@ export default function GroupDetailPage() {
               <button
                 onClick={handleEnroll}
                 disabled={enrollSubmitting || !enrollStudentId}
-                className="bg-black text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                className="btn-primary"
               >
                 {enrollSubmitting ? 'Inscribiendo…' : 'Inscribir'}
               </button>
@@ -379,7 +379,7 @@ export default function GroupDetailPage() {
                   setEnrollOpen(false);
                   setEnrollError(null);
                 }}
-                className="border text-sm px-3 py-2 rounded"
+                className="btn-secondary"
               >
                 Cancelar
               </button>
@@ -447,7 +447,7 @@ export default function GroupDetailPage() {
           {!showSessionForm && (
             <button
               onClick={startCreateSession}
-              className="bg-black text-white text-sm px-3 py-2 rounded"
+              className="btn-primary"
             >
               + Nueva sesión
             </button>
@@ -503,7 +503,7 @@ export default function GroupDetailPage() {
               <button
                 type="submit"
                 disabled={sessionSubmitting}
-                className="bg-black text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                className="btn-primary"
               >
                 {sessionSubmitting
                   ? 'Guardando…'
@@ -514,7 +514,7 @@ export default function GroupDetailPage() {
               <button
                 type="button"
                 onClick={cancelSessionForm}
-                className="border text-sm px-3 py-2 rounded"
+                className="btn-secondary"
               >
                 Cancelar
               </button>

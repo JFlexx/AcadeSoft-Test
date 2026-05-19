@@ -163,7 +163,7 @@ export default function GroupsPage() {
           <button
             onClick={startCreate}
             disabled={courses.length === 0}
-            className="bg-black text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+            className="btn-primary"
             title={courses.length === 0 ? 'Crea primero un curso' : ''}
           >
             + Nuevo grupo
@@ -265,14 +265,14 @@ export default function GroupsPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="bg-black text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+              className="btn-primary"
             >
               {submitting ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear'}
             </button>
             <button
               type="button"
               onClick={cancel}
-              className="border text-sm px-3 py-2 rounded"
+              className="btn-secondary"
             >
               Cancelar
             </button>
