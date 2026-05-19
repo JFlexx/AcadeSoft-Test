@@ -11,6 +11,7 @@ import { GroupsModule } from './groups/groups.module';
 import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { InvoicesModule } from './invoices/invoices.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AttendanceModule } from './attendance/attendance.module';
     EnrollmentsModule,
     SessionsModule,
     AttendanceModule,
+    InvoicesModule,
   ],
   controllers: [HealthController],
 })
