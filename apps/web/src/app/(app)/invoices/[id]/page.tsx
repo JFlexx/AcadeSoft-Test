@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { api, ApiError } from '@/lib/api';
+import { api, apiBlob, ApiError } from '@/lib/api';
 
 type InvoiceStatus =
   | 'DRAFT'
@@ -114,6 +114,7 @@ export default function InvoiceDetailPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const [cancelling, setCancelling] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -195,6 +196,26 @@ export default function InvoiceDetailPage() {
     }
   }
 
+  async function handleDownloadPdf() {
+    if (!invoice) return;
+    setDownloadingPdf(true);
+    try {
+      const { blob, filename } = await apiBlob(`/invoices/${invoice.id}/pdf`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename ?? `factura-${invoice.number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Error descargando PDF');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   async function handleCancelInvoice() {
     if (
       !window.confirm(
@@ -265,15 +286,24 @@ export default function InvoiceDetailPage() {
             <p className="text-sm text-gray-600 mt-1">{invoice.description}</p>
           )}
         </div>
-        {canCancel && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleCancelInvoice}
-            disabled={cancelling}
-            className="btn-secondary text-red-600"
+            onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
+            className="btn-secondary"
           >
-            {cancelling ? 'Anulando…' : 'Anular factura'}
+            {downloadingPdf ? 'Descargando…' : 'Descargar PDF'}
           </button>
-        )}
+          {canCancel && (
+            <button
+              onClick={handleCancelInvoice}
+              disabled={cancelling}
+              className="btn-secondary text-red-600"
+            >
+              {cancelling ? 'Anulando…' : 'Anular factura'}
+            </button>
+          )}
+        </div>
       </header>
 
       <section className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-8 max-w-md">

@@ -9,6 +9,7 @@ import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ListInvoicesDto } from './dto/list-invoices.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
+import { buildInvoicePdf } from './invoice-pdf';
 
 @Injectable()
 export class InvoicesService {
@@ -171,6 +172,55 @@ export class InvoicesService {
       where: { invoiceId },
       orderBy: { paidAt: 'desc' },
     });
+  }
+
+  async generatePdf(
+    tenantId: string,
+    invoiceId: string,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id: invoiceId, tenantId },
+      include: {
+        payments: { orderBy: { paidAt: 'asc' } },
+        student: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            address: true,
+          },
+        },
+        tenant: { select: { name: true } },
+      },
+    });
+    if (!invoice) throw new NotFoundException();
+
+    const buffer = await buildInvoicePdf(
+      {
+        number: invoice.number,
+        description: invoice.description,
+        notes: invoice.notes,
+        amount: invoice.amount,
+        paidAmount: invoice.paidAmount,
+        issueDate: invoice.issueDate,
+        dueDate: invoice.dueDate,
+        status: invoice.status,
+        billingPeriod: invoice.billingPeriod,
+        student: invoice.student,
+        payments: invoice.payments.map((p) => ({
+          amount: p.amount,
+          method: p.method,
+          paidAt: p.paidAt,
+          reference: p.reference,
+        })),
+      },
+      invoice.tenant.name,
+    );
+
+    return {
+      buffer,
+      filename: `factura-${invoice.number}.pdf`,
+    };
   }
 
   async removePayment(tenantId: string, paymentId: string): Promise<void> {

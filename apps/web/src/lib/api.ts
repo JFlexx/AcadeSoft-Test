@@ -81,6 +81,37 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
   return (await res.json()) as T;
 }
 
+export async function apiBlob(
+  path: string,
+  options: ApiOptions = {},
+): Promise<{ blob: Blob; filename: string | null }> {
+  let res = await rawRequest(path, options);
+
+  if (res.status === 401 && !options.skipAuth) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      res = await rawRequest(path, options);
+    }
+    if (res.status === 401) {
+      onUnauthorized();
+      throw new ApiError(401, 'Unauthorized');
+    }
+  }
+
+  if (!res.ok) {
+    throw new ApiError(res.status, res.statusText);
+  }
+
+  const disposition = res.headers.get('content-disposition');
+  let filename: string | null = null;
+  if (disposition) {
+    const match = /filename="?([^"]+)"?/i.exec(disposition);
+    if (match) filename = match[1];
+  }
+
+  return { blob: await res.blob(), filename };
+}
+
 export async function bootstrapSession(): Promise<boolean> {
   return tryRefresh();
 }
