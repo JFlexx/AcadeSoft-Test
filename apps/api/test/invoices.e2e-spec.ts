@@ -340,6 +340,73 @@ describe('Invoices (e2e)', () => {
       .expect(401);
   });
 
+  it('downloads a PDF for an invoice', async () => {
+    const invoice = await http()
+      .post('/invoices')
+      .set(bearer(acmeToken))
+      .send({
+        studentId: acmeStudentId,
+        amount: 100,
+        description: 'Mensualidad octubre',
+      })
+      .expect(201);
+
+    await http()
+      .post(`/invoices/${invoice.body.id}/payments`)
+      .set(bearer(acmeToken))
+      .send({ amount: 40, method: 'CASH' })
+      .expect(201);
+
+    const res = await http()
+      .get(`/invoices/${invoice.body.id}/pdf`)
+      .set(bearer(acmeToken))
+      .buffer(true)
+      .parse((response, cb) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (c: Buffer) => chunks.push(c));
+        response.on('end', () => cb(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(res.headers['content-type']).toMatch(/application\/pdf/);
+    expect(res.headers['content-disposition']).toMatch(
+      /attachment; filename="factura-/,
+    );
+    expect(Buffer.isBuffer(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(500);
+    expect(res.body.slice(0, 4).toString()).toBe('%PDF');
+  });
+
+  it('blocks PDF download from another tenant with 404', async () => {
+    const invoice = await http()
+      .post('/invoices')
+      .set(bearer(acmeToken))
+      .send({ studentId: acmeStudentId, amount: 100 })
+      .expect(201);
+
+    const beta = await seedTenant(prisma, {
+      slug: 'beta',
+      email: 'admin@beta.local',
+      password: 'TestPassword123!',
+    });
+    const betaToken = await login(beta);
+
+    await http()
+      .get(`/invoices/${invoice.body.id}/pdf`)
+      .set(bearer(betaToken))
+      .expect(404);
+  });
+
+  it('rejects unauthenticated PDF download with 401', async () => {
+    const invoice = await http()
+      .post('/invoices')
+      .set(bearer(acmeToken))
+      .send({ studentId: acmeStudentId, amount: 100 })
+      .expect(201);
+
+    await http().get(`/invoices/${invoice.body.id}/pdf`).expect(401);
+  });
+
   it('rejects extra fields and invalid amounts with 400', async () => {
     await http()
       .post('/invoices')

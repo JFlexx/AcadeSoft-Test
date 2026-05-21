@@ -3,14 +3,17 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -55,6 +58,25 @@ export class InvoicesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
     return this.invoicesService.remove(tenantId, id);
+  }
+
+  @Get(':id/pdf')
+  @Header('Content-Type', 'application/pdf')
+  async pdf(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.invoicesService.generatePdf(
+      tenantId,
+      id,
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${filename}"`,
+    );
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.end(buffer);
   }
 
   @Post(':id/payments')
