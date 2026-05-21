@@ -66,6 +66,12 @@ export class EnrollmentsService {
         status: dto.status,
         droppedAt: dto.droppedAt ? new Date(dto.droppedAt) : undefined,
         notes: dto.notes,
+        monthlyFeeOverride:
+          dto.monthlyFeeOverride === undefined
+            ? undefined
+            : dto.monthlyFeeOverride === null
+              ? null
+              : new Prisma.Decimal(dto.monthlyFeeOverride),
       },
     });
   }

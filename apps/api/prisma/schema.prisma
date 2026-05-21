@@ -230,6 +230,7 @@ model Group {
   startDate   DateTime?
   endDate     DateTime?
   maxCapacity Int?
+  monthlyFee  Decimal?  @db.Decimal(10, 2)
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -248,16 +249,18 @@ model Group {
 // ─── Enrollment ───────────────────────────────────────────────────────────────
 
 model Enrollment {
-  id         String           @id @default(cuid())
-  studentId  String
-  groupId    String
-  status     EnrollmentStatus @default(ACTIVE)
-  enrolledAt DateTime         @default(now())
-  droppedAt  DateTime?
-  notes      String?
+  id                 String           @id @default(cuid())
+  studentId          String
+  groupId            String
+  status             EnrollmentStatus @default(ACTIVE)
+  enrolledAt         DateTime         @default(now())
+  droppedAt          DateTime?
+  notes              String?
+  monthlyFeeOverride Decimal?         @db.Decimal(10, 2)
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  group   Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  student  Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  group    Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
 
   @@unique([studentId, groupId])
   @@index([groupId])
@@ -308,25 +311,29 @@ model Attendance {
 // ─── Invoice & Payment ────────────────────────────────────────────────────────
 
 model Invoice {
-  id          String        @id @default(cuid())
-  tenantId    String
-  studentId   String
-  number      String
-  description String?
-  notes       String?
-  amount      Decimal       @db.Decimal(10, 2)
-  paidAmount  Decimal       @db.Decimal(10, 2) @default(0)
-  issueDate   DateTime      @default(now())
-  dueDate     DateTime?
-  status      InvoiceStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  tenantId      String
+  studentId     String
+  enrollmentId  String?
+  billingPeriod String?
+  number        String
+  description   String?
+  notes         String?
+  amount        Decimal       @db.Decimal(10, 2)
+  paidAmount    Decimal       @db.Decimal(10, 2) @default(0)
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  status        InvoiceStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  student  Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  payments Payment[]
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student    Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrollment Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  payments   Payment[]
 
   @@unique([tenantId, number])
+  @@unique([enrollmentId, billingPeriod])
   @@index([tenantId, status])
   @@index([tenantId, issueDate])
   @@index([studentId])

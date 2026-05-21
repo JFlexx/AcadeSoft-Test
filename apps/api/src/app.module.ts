@@ -12,6 +12,7 @@ import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { InvoicesModule } from './invoices/invoices.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { InvoicesModule } from './invoices/invoices.module';
     SessionsModule,
     AttendanceModule,
     InvoicesModule,
+    BillingModule,
   ],
   controllers: [HealthController],
 })

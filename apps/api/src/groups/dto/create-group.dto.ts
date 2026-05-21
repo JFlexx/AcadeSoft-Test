@@ -2,6 +2,7 @@ import {
   IsDateString,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
@@ -44,4 +45,9 @@ export class CreateGroupDto {
   @IsInt()
   @Min(1)
   maxCapacity?: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  monthlyFee?: number;
 }
