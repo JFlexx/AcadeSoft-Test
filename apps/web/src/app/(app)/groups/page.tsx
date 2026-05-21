@@ -13,6 +13,7 @@ type Group = {
   name: string;
   description: string | null;
   maxCapacity: number | null;
+  monthlyFee: string | null;
   startDate: string | null;
   endDate: string | null;
   isActive: boolean;
@@ -24,6 +25,7 @@ const EMPTY_FORM = {
   name: '',
   description: '',
   maxCapacity: '',
+  monthlyFee: '',
   startDate: '',
   endDate: '',
 };
@@ -88,6 +90,7 @@ export default function GroupsPage() {
       name: g.name,
       description: g.description ?? '',
       maxCapacity: g.maxCapacity?.toString() ?? '',
+      monthlyFee: g.monthlyFee ?? '',
       startDate: g.startDate ? g.startDate.slice(0, 10) : '',
       endDate: g.endDate ? g.endDate.slice(0, 10) : '',
     });
@@ -116,6 +119,7 @@ export default function GroupsPage() {
       if (form.teacherId) payload.teacherId = form.teacherId;
       if (form.description.trim()) payload.description = form.description.trim();
       if (form.maxCapacity) payload.maxCapacity = Number(form.maxCapacity);
+      if (form.monthlyFee) payload.monthlyFee = Number(form.monthlyFee);
       if (form.startDate) payload.startDate = new Date(form.startDate).toISOString();
       if (form.endDate) payload.endDate = new Date(form.endDate).toISOString();
 
@@ -235,6 +239,17 @@ export default function GroupsPage() {
                 className="w-full border rounded px-2 py-1 text-sm"
               />
             </Field>
+            <Field label="Cuota mensual (€)">
+              <input
+                type="number"
+                step="0.01"
+                min={0}
+                value={form.monthlyFee}
+                onChange={(e) => setForm({ ...form, monthlyFee: e.target.value })}
+                placeholder="0.00"
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+            </Field>
             <Field label="Inicio">
               <input
                 type="date"
@@ -312,6 +327,7 @@ export default function GroupsPage() {
               <th className="py-2 font-medium">Curso</th>
               <th className="py-2 font-medium">Profesor</th>
               <th className="py-2 font-medium">Aforo</th>
+              <th className="py-2 font-medium text-right">Cuota/mes</th>
               <th className="py-2 font-medium">Estado</th>
               <th className="py-2 font-medium text-right">Acciones</th>
             </tr>
@@ -333,6 +349,14 @@ export default function GroupsPage() {
                     : '—'}
                 </td>
                 <td className="py-2 text-gray-600">{g.maxCapacity ?? '—'}</td>
+                <td className="py-2 text-right text-gray-600">
+                  {g.monthlyFee
+                    ? new Intl.NumberFormat('es-ES', {
+                        style: 'currency',
+                        currency: 'EUR',
+                      }).format(Number(g.monthlyFee))
+                    : '—'}
+                </td>
                 <td className="py-2">
                   {g.isActive ? (
                     <span className="text-green-700 text-xs">Activo</span>

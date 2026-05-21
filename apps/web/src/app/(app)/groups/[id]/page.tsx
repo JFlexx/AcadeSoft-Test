@@ -15,6 +15,7 @@ type Group = {
   name: string;
   description: string | null;
   maxCapacity: number | null;
+  monthlyFee: string | null;
   startDate: string | null;
   endDate: string | null;
   isActive: boolean;
@@ -27,6 +28,7 @@ type Enrollment = {
   enrolledAt: string;
   droppedAt: string | null;
   notes: string | null;
+  monthlyFeeOverride: string | null;
 };
 type SessionStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 type Session = {
@@ -100,6 +102,10 @@ export default function GroupDetailPage() {
   const [sessionForm, setSessionForm] = useState(EMPTY_SESSION_FORM);
   const [sessionSubmitting, setSessionSubmitting] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+
+  // Per-enrollment fee override drafts (live editing state)
+  const [feeDrafts, setFeeDrafts] = useState<Record<string, string>>({});
+  const [feeSaving, setFeeSaving] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -191,6 +197,43 @@ export default function GroupDetailPage() {
       await refresh();
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : 'Error de red');
+    }
+  }
+
+  async function handleFeeOverrideSave(enrollment: Enrollment) {
+    const draft = feeDrafts[enrollment.id];
+    if (draft === undefined) return;
+    const trimmed = draft.trim();
+    const currentValue = enrollment.monthlyFeeOverride ?? '';
+    if (trimmed === currentValue.toString()) return;
+
+    setFeeSaving(enrollment.id);
+    try {
+      const payload: Record<string, unknown> = {};
+      if (trimmed === '') {
+        payload.monthlyFeeOverride = null;
+      } else {
+        const n = Number(trimmed);
+        if (Number.isNaN(n) || n < 0) {
+          window.alert('Cuota inválida');
+          return;
+        }
+        payload.monthlyFeeOverride = n;
+      }
+      await api(`/enrollments/${enrollment.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      setFeeDrafts((prev) => {
+        const next = { ...prev };
+        delete next[enrollment.id];
+        return next;
+      });
+      await refresh();
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+    } finally {
+      setFeeSaving(null);
     }
   }
 
@@ -326,6 +369,15 @@ export default function GroupDetailPage() {
           {' → '}
           {group.endDate ? group.endDate.slice(0, 10) : '—'}
         </span>
+        <span className="text-gray-500">Cuota mensual</span>
+        <span>
+          {group.monthlyFee
+            ? new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR',
+              }).format(Number(group.monthlyFee))
+            : 'Sin cuota'}
+        </span>
         <span className="text-gray-500">Estado</span>
         <span>{group.isActive ? 'Activo' : 'Inactivo'}</span>
       </section>
@@ -397,6 +449,7 @@ export default function GroupDetailPage() {
                 <th className="py-2 font-medium">Alumno</th>
                 <th className="py-2 font-medium">Estado</th>
                 <th className="py-2 font-medium">Inscrito</th>
+                <th className="py-2 font-medium">Cuota mensual</th>
                 <th className="py-2 font-medium text-right">Acciones</th>
               </tr>
             </thead>
@@ -425,6 +478,45 @@ export default function GroupDetailPage() {
                       </select>
                     </td>
                     <td className="py-2 text-gray-600">{e.enrolledAt.slice(0, 10)}</td>
+                    <td className="py-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={
+                            feeDrafts[e.id] ??
+                            (e.monthlyFeeOverride ?? '')
+                          }
+                          onChange={(ev) =>
+                            setFeeDrafts((prev) => ({
+                              ...prev,
+                              [e.id]: ev.target.value,
+                            }))
+                          }
+                          onBlur={() => handleFeeOverrideSave(e)}
+                          onKeyDown={(ev) => {
+                            if (ev.key === 'Enter') ev.currentTarget.blur();
+                          }}
+                          placeholder={
+                            group.monthlyFee
+                              ? `= ${group.monthlyFee}`
+                              : 'Sin cuota'
+                          }
+                          disabled={feeSaving === e.id}
+                          className="w-24 border rounded px-2 py-1 text-sm bg-white disabled:opacity-50"
+                        />
+                        <span className="text-xs text-gray-500">€</span>
+                        {!e.monthlyFeeOverride && group.monthlyFee && (
+                          <span
+                            className="text-xs text-gray-400"
+                            title="Usando cuota del grupo"
+                          >
+                            (grupo)
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-2 text-right">
                       <button
                         onClick={() => handleUnenroll(e.id, fullName)}
