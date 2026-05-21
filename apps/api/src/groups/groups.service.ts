@@ -22,6 +22,8 @@ export class GroupsService {
       startDate: dto.startDate ? new Date(dto.startDate) : undefined,
       endDate: dto.endDate ? new Date(dto.endDate) : undefined,
       maxCapacity: dto.maxCapacity,
+      monthlyFee:
+        dto.monthlyFee !== undefined ? new Prisma.Decimal(dto.monthlyFee) : undefined,
     };
     return this.prisma.group.create({ data });
   }
@@ -55,6 +57,8 @@ export class GroupsService {
       startDate: dto.startDate ? new Date(dto.startDate) : undefined,
       endDate: dto.endDate ? new Date(dto.endDate) : undefined,
       maxCapacity: dto.maxCapacity,
+      monthlyFee:
+        dto.monthlyFee !== undefined ? new Prisma.Decimal(dto.monthlyFee) : undefined,
       isActive: dto.isActive,
     };
     return this.prisma.group.update({ where: { id }, data });

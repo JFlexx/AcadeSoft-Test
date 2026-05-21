@@ -2,6 +2,7 @@ import {
   IsBoolean,
   IsDateString,
   IsInt,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
@@ -44,6 +45,11 @@ export class UpdateGroupDto {
   @IsInt()
   @Min(1)
   maxCapacity?: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  monthlyFee?: number;
 
   @IsOptional()
   @IsBoolean()
