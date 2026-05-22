@@ -9,10 +9,21 @@ type Student = {
   lastName: string;
   email: string | null;
   phone: string | null;
+  iban: string | null;
+  mandateReference: string | null;
+  mandateDate: string | null;
   isActive: boolean;
 };
 
-const EMPTY_FORM = { firstName: '', lastName: '', email: '', phone: '' };
+const EMPTY_FORM = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  iban: '',
+  mandateReference: '',
+  mandateDate: '',
+};
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -51,6 +62,9 @@ export default function StudentsPage() {
       lastName: s.lastName,
       email: s.email ?? '',
       phone: s.phone ?? '',
+      iban: s.iban ?? '',
+      mandateReference: s.mandateReference ?? '',
+      mandateDate: s.mandateDate ? s.mandateDate.slice(0, 10) : '',
     });
     setShowForm(true);
     setError(null);
@@ -74,6 +88,11 @@ export default function StudentsPage() {
       };
       if (form.email.trim()) payload.email = form.email.trim();
       if (form.phone.trim()) payload.phone = form.phone.trim();
+      if (form.iban.trim()) payload.iban = form.iban.replace(/\s+/g, '').toUpperCase();
+      if (form.mandateReference.trim())
+        payload.mandateReference = form.mandateReference.trim();
+      if (form.mandateDate)
+        payload.mandateDate = new Date(form.mandateDate).toISOString();
 
       if (editing) {
         await api(`/students/${editing.id}`, {
@@ -154,6 +173,36 @@ export default function StudentsPage() {
               onChange={(v) => setForm({ ...form, phone: v })}
             />
           </div>
+
+          <fieldset className="border-t pt-3 space-y-3">
+            <legend className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Domiciliación SEPA
+            </legend>
+            <p className="text-xs text-gray-500 -mt-2">
+              Necesario para incluir al alumno en las remesas de domiciliación.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="IBAN"
+                value={form.iban}
+                onChange={(v) => setForm({ ...form, iban: v })}
+                placeholder="ES…"
+              />
+              <Input
+                label="Referencia de mandato"
+                value={form.mandateReference}
+                onChange={(v) => setForm({ ...form, mandateReference: v })}
+                placeholder="MND-001"
+              />
+              <Input
+                label="Fecha de firma del mandato"
+                type="date"
+                value={form.mandateDate}
+                onChange={(v) => setForm({ ...form, mandateDate: v })}
+              />
+            </div>
+          </fieldset>
+
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button
@@ -235,12 +284,14 @@ function Input({
   onChange,
   type = 'text',
   required = false,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
   required?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="block">
@@ -253,6 +304,7 @@ function Input({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
+        placeholder={placeholder}
         className="w-full border rounded px-2 py-1 text-sm"
       />
     </label>
