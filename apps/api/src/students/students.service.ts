@@ -8,12 +8,13 @@ export class StudentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   create(tenantId: string, dto: CreateStudentDto) {
-    const { birthDate, ...rest } = dto;
+    const { birthDate, mandateDate, ...rest } = dto;
     return this.prisma.student.create({
       data: {
         tenantId,
         ...rest,
         birthDate: birthDate ? new Date(birthDate) : undefined,
+        mandateDate: mandateDate ? new Date(mandateDate) : undefined,
       },
     });
   }
@@ -35,12 +36,13 @@ export class StudentsService {
 
   async update(tenantId: string, id: string, dto: UpdateStudentDto) {
     await this.findOne(tenantId, id);
-    const { birthDate, ...rest } = dto;
+    const { birthDate, mandateDate, ...rest } = dto;
     return this.prisma.student.update({
       where: { id },
       data: {
         ...rest,
         birthDate: birthDate ? new Date(birthDate) : undefined,
+        mandateDate: mandateDate ? new Date(mandateDate) : undefined,
       },
     });
   }

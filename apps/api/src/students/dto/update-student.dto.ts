@@ -52,6 +52,20 @@ export class UpdateStudentDto {
   notes?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(34)
+  iban?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(35)
+  mandateReference?: string;
+
+  @IsOptional()
+  @IsDateString()
+  mandateDate?: string;
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }

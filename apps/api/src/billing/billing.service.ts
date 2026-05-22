@@ -1,6 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GenerateMonthDto } from './dto/generate-month.dto';
+import { SepaRemittanceDto } from './dto/sepa-remittance.dto';
+import {
+  buildSepaXml,
+  generateMessageId,
+  SepaTransaction,
+} from './sepa';
 
 const MONTH_NAMES_ES = [
   'Enero',
@@ -154,6 +160,163 @@ export class BillingService {
     };
 
     return { period, dryRun: !!dto.dryRun, summary, results };
+  }
+
+  // ─── SEPA direct debit remittance ───────────────────────────────────────────
+
+  private async collectSepaItems(tenantId: string, dto: SepaRemittanceDto) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        name: true,
+        legalName: true,
+        iban: true,
+        sepaCreditorId: true,
+      },
+    });
+    if (!tenant?.iban || !tenant.sepaCreditorId) {
+      throw new BadRequestException(
+        'Configura el IBAN y el identificador de acreedor SEPA en Ajustes antes de generar remesas',
+      );
+    }
+
+    const periodStart = new Date(Date.UTC(dto.year, dto.month - 1, 1));
+    const periodEnd = new Date(Date.UTC(dto.year, dto.month, 1));
+
+    const invoices = await this.prisma.invoice.findMany({
+      where: {
+        tenantId,
+        status: { in: ['PENDING', 'PARTIAL'] },
+        issueDate: { gte: periodStart, lt: periodEnd },
+      },
+      include: {
+        student: {
+          select: {
+            firstName: true,
+            lastName: true,
+            iban: true,
+            mandateReference: true,
+            mandateDate: true,
+          },
+        },
+      },
+      orderBy: { number: 'asc' },
+    });
+
+    const included: {
+      invoiceId: string;
+      number: string;
+      studentName: string;
+      amount: string;
+      tx: SepaTransaction;
+    }[] = [];
+    const skipped: {
+      invoiceId: string;
+      number: string;
+      studentName: string;
+      reason: string;
+    }[] = [];
+
+    for (const inv of invoices) {
+      const studentName = `${inv.student.firstName} ${inv.student.lastName}`;
+      const pending = inv.amount.sub(inv.paidAmount);
+      if (pending.lte(0)) {
+        skipped.push({
+          invoiceId: inv.id,
+          number: inv.number,
+          studentName,
+          reason: 'Sin importe pendiente',
+        });
+        continue;
+      }
+      if (
+        !inv.student.iban ||
+        !inv.student.mandateReference ||
+        !inv.student.mandateDate
+      ) {
+        skipped.push({
+          invoiceId: inv.id,
+          number: inv.number,
+          studentName,
+          reason: 'Alumno sin IBAN o mandato de domiciliación',
+        });
+        continue;
+      }
+
+      const amount = pending.toFixed(2);
+      included.push({
+        invoiceId: inv.id,
+        number: inv.number,
+        studentName,
+        amount,
+        tx: {
+          endToEndId: inv.number,
+          amount,
+          mandateId: inv.student.mandateReference,
+          mandateDate: inv.student.mandateDate.toISOString().slice(0, 10),
+          debtorName: studentName,
+          debtorIban: inv.student.iban,
+          remittanceInfo: inv.description
+            ? `${inv.number} ${inv.description}`.slice(0, 140)
+            : inv.number,
+        },
+      });
+    }
+
+    const creditor = {
+      name: tenant.legalName ?? tenant.name,
+      iban: tenant.iban,
+      creditorId: tenant.sepaCreditorId,
+    };
+
+    return { creditor, included, skipped };
+  }
+
+  async sepaPreview(tenantId: string, dto: SepaRemittanceDto) {
+    const { included, skipped } = await this.collectSepaItems(tenantId, dto);
+    const period = `${dto.year}-${dto.month.toString().padStart(2, '0')}`;
+    const totalAmount = included
+      .reduce((sum, i) => sum + Number(i.amount), 0)
+      .toFixed(2);
+    return {
+      period,
+      totalAmount,
+      count: included.length,
+      included: included.map((i) => ({
+        invoiceId: i.invoiceId,
+        number: i.number,
+        studentName: i.studentName,
+        amount: i.amount,
+      })),
+      skipped,
+    };
+  }
+
+  async sepaXml(
+    tenantId: string,
+    dto: SepaRemittanceDto,
+  ): Promise<{ xml: string; filename: string }> {
+    const { creditor, included } = await this.collectSepaItems(tenantId, dto);
+    if (included.length === 0) {
+      throw new BadRequestException(
+        'No hay facturas domiciliables en este periodo (revisa IBAN/mandato de los alumnos)',
+      );
+    }
+
+    const collectionDate =
+      dto.collectionDate?.slice(0, 10) ??
+      new Date().toISOString().slice(0, 10);
+    const period = `${dto.year}-${dto.month.toString().padStart(2, '0')}`;
+
+    const xml = buildSepaXml({
+      messageId: generateMessageId(),
+      creationDateTime: new Date(),
+      collectionDate,
+      creditor,
+      transactions: included.map((i) => i.tx),
+    });
+
+    return { xml, filename: `remesa-sepa-${period}.xml` };
   }
 }
 

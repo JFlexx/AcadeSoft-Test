@@ -148,12 +148,15 @@ model Student {
   phone     String?
   birthDate DateTime?
   gender    Gender?
-  address   String?
-  photoUrl  String?
-  notes     String?
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  address          String?
+  photoUrl         String?
+  notes            String?
+  iban             String?
+  mandateReference String?
+  mandateDate      DateTime?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   guardians   Guardian[]
