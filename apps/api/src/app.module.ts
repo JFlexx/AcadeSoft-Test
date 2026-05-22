@@ -13,6 +13,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { BillingModule } from './billing/billing.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { BillingModule } from './billing/billing.module';
     AttendanceModule,
     InvoicesModule,
     BillingModule,
+    SettingsModule,
   ],
   controllers: [HealthController],
 })

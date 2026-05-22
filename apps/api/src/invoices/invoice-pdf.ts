@@ -68,9 +68,16 @@ function fmtDate(d: Date | null): string {
   }).format(d);
 }
 
+export type InvoiceIssuer = {
+  name: string;
+  legalName: string | null;
+  taxId: string | null;
+  address: string | null;
+};
+
 export function buildInvoicePdf(
   invoice: InvoiceForPdf,
-  tenantName: string,
+  issuer: InvoiceIssuer,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -80,17 +87,22 @@ export function buildInvoicePdf(
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    // ─── Header
+    // ─── Header (issuer)
+    const issuerName = issuer.legalName ?? issuer.name;
     doc
       .fillColor('#111827')
       .font('Helvetica-Bold')
       .fontSize(20)
-      .text(tenantName, 50, 50);
-    doc
-      .font('Helvetica')
-      .fontSize(9)
-      .fillColor('#6b7280')
-      .text('Factura emitida desde AcadeSoft', 50, 75);
+      .text(issuerName, 50, 50);
+    let issuerY = 75;
+    doc.font('Helvetica').fontSize(9).fillColor('#6b7280');
+    if (issuer.taxId) {
+      doc.text(`CIF/NIF: ${issuer.taxId}`, 50, issuerY);
+      issuerY += 12;
+    }
+    if (issuer.address) {
+      doc.text(issuer.address, 50, issuerY, { width: 250 });
+    }
 
     const rightX = 350;
     doc

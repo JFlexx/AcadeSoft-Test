@@ -77,6 +77,13 @@ model Tenant {
   status         TenantStatus @default(ACTIVE)
   invoicePrefix  String       @default("F")
   invoiceCounter Int          @default(0)
+  legalName      String?
+  taxId          String?
+  address        String?
+  contactEmail   String?
+  contactPhone   String?
+  iban           String?
+  sepaCreditorId String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

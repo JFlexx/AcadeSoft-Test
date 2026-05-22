@@ -190,7 +190,14 @@ export class InvoicesService {
             address: true,
           },
         },
-        tenant: { select: { name: true } },
+        tenant: {
+          select: {
+            name: true,
+            legalName: true,
+            taxId: true,
+            address: true,
+          },
+        },
       },
     });
     if (!invoice) throw new NotFoundException();
@@ -214,7 +221,12 @@ export class InvoicesService {
           reference: p.reference,
         })),
       },
-      invoice.tenant.name,
+      {
+        name: invoice.tenant.name,
+        legalName: invoice.tenant.legalName,
+        taxId: invoice.tenant.taxId,
+        address: invoice.tenant.address,
+      },
     );
 
     return {
