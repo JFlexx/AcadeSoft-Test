@@ -10,6 +10,7 @@ import {
   Users2,
   Receipt,
   CalendarClock,
+  Settings,
   CircleUser,
   LogOut,
   type LucideIcon,
@@ -23,6 +24,7 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/groups', label: 'Grupos', icon: Users2 },
   { href: '/invoices', label: 'Facturas', icon: Receipt },
   { href: '/billing', label: 'Mensualidades', icon: CalendarClock },
+  { href: '/settings', label: 'Ajustes', icon: Settings },
   { href: '/me', label: 'Mi cuenta', icon: CircleUser },
 ];
 
