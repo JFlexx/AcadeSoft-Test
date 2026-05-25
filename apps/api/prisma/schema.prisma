@@ -75,10 +75,11 @@ model Tenant {
   slug           String       @unique
   logoUrl        String?
   status         TenantStatus @default(ACTIVE)
-  invoicePrefix  String       @default("F")
-  invoiceCounter Int          @default(0)
-  legalName      String?
-  taxId          String?
+  invoicePrefix    String       @default("F")
+  invoiceCounter   Int          @default(0)
+  lastInvoiceHash  String?
+  legalName        String?
+  taxId            String?
   address        String?
   contactEmail   String?
   contactPhone   String?
@@ -334,6 +335,9 @@ model Invoice {
   issueDate     DateTime      @default(now())
   dueDate       DateTime?
   status        InvoiceStatus @default(PENDING)
+  hash          String?
+  previousHash  String?
+  hashedAt      DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
