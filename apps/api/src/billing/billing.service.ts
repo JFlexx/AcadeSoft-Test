@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { createChainedInvoice } from '../invoices/invoice-hash';
 import { GenerateMonthDto } from './dto/generate-month.dto';
 import { SepaRemittanceDto } from './dto/sepa-remittance.dto';
 import {
@@ -115,31 +116,17 @@ export class BillingService {
         continue;
       }
 
-      const invoice = await this.prisma.$transaction(async (tx) => {
-        const tenant = await tx.tenant.update({
-          where: { id: tenantId },
-          data: { invoiceCounter: { increment: 1 } },
-          select: { invoicePrefix: true, invoiceCounter: true },
-        });
-        const number = formatInvoiceNumber(
-          tenant.invoicePrefix,
+      const invoice = await this.prisma.$transaction(async (tx) =>
+        createChainedInvoice(tx, tenantId, {
+          studentId: e.studentId,
+          enrollmentId: e.id,
+          billingPeriod: period,
+          amount: fee,
+          description: `${groupName} — ${MONTH_NAMES_ES[dto.month - 1]} ${dto.year}`,
           issueDate,
-          tenant.invoiceCounter,
-        );
-        return tx.invoice.create({
-          data: {
-            tenantId,
-            studentId: e.studentId,
-            enrollmentId: e.id,
-            billingPeriod: period,
-            number,
-            amount: fee,
-            description: `${groupName} — ${MONTH_NAMES_ES[dto.month - 1]} ${dto.year}`,
-            issueDate,
-            dueDate,
-          },
-        });
-      });
+          dueDate,
+        }),
+      );
 
       results.push({
         enrollmentId: e.id,
@@ -318,13 +305,4 @@ export class BillingService {
 
     return { xml, filename: `remesa-sepa-${period}.xml` };
   }
-}
-
-function formatInvoiceNumber(
-  prefix: string,
-  issueDate: Date,
-  counter: number,
-): string {
-  const year = issueDate.getUTCFullYear();
-  return `${prefix}-${year}-${counter.toString().padStart(4, '0')}`;
 }

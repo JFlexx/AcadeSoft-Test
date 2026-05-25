@@ -10,6 +10,7 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ListInvoicesDto } from './dto/list-invoices.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { buildInvoicePdf } from './invoice-pdf';
+import { createChainedInvoice } from './invoice-hash';
 
 @Injectable()
 export class InvoicesService {
@@ -21,31 +22,16 @@ export class InvoicesService {
     const issueDate = dto.issueDate ? new Date(dto.issueDate) : new Date();
     const dueDate = dto.dueDate ? new Date(dto.dueDate) : undefined;
 
-    return this.prisma.$transaction(async (tx) => {
-      const tenant = await tx.tenant.update({
-        where: { id: tenantId },
-        data: { invoiceCounter: { increment: 1 } },
-        select: { invoicePrefix: true, invoiceCounter: true },
-      });
-      const number = formatInvoiceNumber(
-        tenant.invoicePrefix,
+    return this.prisma.$transaction(async (tx) =>
+      createChainedInvoice(tx, tenantId, {
+        studentId: dto.studentId,
+        amount: new Prisma.Decimal(dto.amount),
+        description: dto.description,
+        notes: dto.notes,
         issueDate,
-        tenant.invoiceCounter,
-      );
-
-      return tx.invoice.create({
-        data: {
-          tenantId,
-          studentId: dto.studentId,
-          number,
-          amount: new Prisma.Decimal(dto.amount),
-          description: dto.description,
-          notes: dto.notes,
-          issueDate,
-          dueDate,
-        },
-      });
-    });
+        dueDate,
+      }),
+    );
   }
 
   findAll(tenantId: string, filters: ListInvoicesDto) {
@@ -80,11 +66,16 @@ export class InvoicesService {
   async update(tenantId: string, id: string, dto: UpdateInvoiceDto) {
     const invoice = await this.prisma.invoice.findFirst({
       where: { id, tenantId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, hash: true },
     });
     if (!invoice) throw new NotFoundException();
     if (invoice.status === 'CANCELLED') {
       throw new BadRequestException('Cannot update a cancelled invoice');
+    }
+    if (invoice.hash && dto.issueDate !== undefined) {
+      throw new BadRequestException(
+        'No se puede cambiar la fecha de emisión de una factura ya registrada (cadena Verifactu). Anula y emite una rectificativa.',
+      );
     }
 
     return this.prisma.invoice.update({
@@ -105,10 +96,16 @@ export class InvoicesService {
       select: {
         id: true,
         status: true,
+        hash: true,
         _count: { select: { payments: true } },
       },
     });
     if (!invoice) throw new NotFoundException();
+    if (invoice.hash) {
+      throw new BadRequestException(
+        'No se puede borrar una factura ya registrada en la cadena Verifactu. Anúlala con status CANCELLED.',
+      );
+    }
     if (invoice._count.payments > 0) {
       throw new BadRequestException('Cannot delete an invoice with payments');
     }
@@ -266,15 +263,6 @@ export class InvoicesService {
     });
     if (!student) throw new BadRequestException('Student not found in tenant');
   }
-}
-
-function formatInvoiceNumber(
-  prefix: string,
-  issueDate: Date,
-  counter: number,
-): string {
-  const year = issueDate.getUTCFullYear();
-  return `${prefix}-${year}-${counter.toString().padStart(4, '0')}`;
 }
 
 function computeStatus(
