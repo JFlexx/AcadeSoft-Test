@@ -6,10 +6,12 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { SignupDto } from './dto/signup.dto';
 
 export interface JwtPayload {
   sub: string;
@@ -24,6 +26,49 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
   ) {}
+
+  async signup(dto: SignupDto) {
+    const role = await this.prisma.role.upsert({
+      where: { name: 'admin' },
+      update: {},
+      create: { name: 'admin', description: 'Tenant administrator', isSystem: true },
+    });
+
+    const passwordHash = await argon2.hash(dto.password);
+
+    let tenantId: string;
+    let userId: string;
+    try {
+      const result = await this.prisma.$transaction(async (tx) => {
+        const tenant = await tx.tenant.create({
+          data: { slug: dto.tenantSlug, name: dto.tenantName },
+        });
+        const user = await tx.user.create({
+          data: {
+            tenantId: tenant.id,
+            roleId: role.id,
+            email: dto.email,
+            passwordHash,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+          },
+        });
+        return { tenantId: tenant.id, userId: user.id };
+      });
+      tenantId = result.tenantId;
+      userId = result.userId;
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new ConflictException('Tenant slug already taken');
+      }
+      throw err;
+    }
+
+    return this.issueTokens(userId, tenantId, role.name);
+  }
 
   async register(dto: RegisterDto) {
     const tenant = await this.prisma.tenant.findUnique({ where: { slug: dto.tenantSlug } });

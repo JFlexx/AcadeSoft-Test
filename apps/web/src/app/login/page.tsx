@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
@@ -100,6 +101,13 @@ export default function LoginPage() {
         >
           {submitting ? 'Entrando…' : 'Entrar'}
         </button>
+
+        <p className="text-sm text-gray-600 text-center">
+          ¿No tienes cuenta?{' '}
+          <Link href="/signup" className="text-brand-700 hover:underline">
+            Crea tu academia
+          </Link>
+        </p>
       </form>
     </main>
   );
