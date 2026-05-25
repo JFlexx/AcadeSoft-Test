@@ -18,6 +18,7 @@ type InvoiceForPdf = {
   dueDate: Date | null;
   status: InvoiceStatus;
   billingPeriod: string | null;
+  hash: string | null;
   student: {
     firstName: string;
     lastName: string;
@@ -25,6 +26,11 @@ type InvoiceForPdf = {
     address: string | null;
   };
   payments: Payment[];
+};
+
+export type VerificationBlock = {
+  qrPng: Buffer;
+  qrUrl: string;
 };
 
 const STATUS_LABEL_ES: Record<InvoiceStatus, string> = {
@@ -78,6 +84,7 @@ export type InvoiceIssuer = {
 export function buildInvoicePdf(
   invoice: InvoiceForPdf,
   issuer: InvoiceIssuer,
+  verification: VerificationBlock | null = null,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -277,9 +284,57 @@ export function buildInvoicePdf(
       }
     }
 
+    // ─── Verification block (Verifactu QR + huella)
+    if (verification && invoice.hash) {
+      const vy = 640;
+      doc
+        .fillColor('#6b7280')
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .text('VERIFICACIÓN', 50, vy);
+      doc
+        .moveTo(50, vy + 14)
+        .lineTo(545, vy + 14)
+        .strokeColor('#e5e7eb')
+        .stroke();
+
+      // QR on the left
+      doc.image(verification.qrPng, 50, vy + 22, { width: 70, height: 70 });
+
+      // Hash + URL on the right
+      doc
+        .fillColor('#374151')
+        .font('Helvetica')
+        .fontSize(8)
+        .text('Huella (SHA-256):', 135, vy + 22);
+      doc
+        .fillColor('#111827')
+        .font('Courier')
+        .fontSize(7)
+        .text(invoice.hash, 135, vy + 34, { width: 410 });
+      doc
+        .fillColor('#6b7280')
+        .font('Helvetica')
+        .fontSize(8)
+        .text(
+          'Escanea el código QR para verificar la factura, o consulta:',
+          135,
+          vy + 60,
+        );
+      doc
+        .fillColor('#1d4ed8')
+        .font('Helvetica')
+        .fontSize(7)
+        .text(verification.qrUrl, 135, vy + 72, {
+          width: 410,
+          link: verification.qrUrl,
+          underline: true,
+        });
+    }
+
     // ─── Notes
     if (invoice.notes) {
-      const notesY = 720;
+      const notesY = 730;
       doc
         .fillColor('#6b7280')
         .font('Helvetica-Bold')

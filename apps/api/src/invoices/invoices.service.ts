@@ -11,6 +11,7 @@ import { ListInvoicesDto } from './dto/list-invoices.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { buildInvoicePdf } from './invoice-pdf';
 import { createChainedInvoice } from './invoice-hash';
+import { buildInvoiceQrPng, buildVerifactuQrUrl } from './invoice-qr';
 
 @Injectable()
 export class InvoicesService {
@@ -199,6 +200,18 @@ export class InvoicesService {
     });
     if (!invoice) throw new NotFoundException();
 
+    let verification = null;
+    if (invoice.hash) {
+      const qrUrl = buildVerifactuQrUrl({
+        emitterTaxId: invoice.tenant.taxId ?? invoice.tenantId,
+        invoiceNumber: invoice.number,
+        issueDate: invoice.issueDate,
+        amount: invoice.amount.toFixed(2),
+      });
+      const qrPng = await buildInvoiceQrPng(qrUrl);
+      verification = { qrPng, qrUrl };
+    }
+
     const buffer = await buildInvoicePdf(
       {
         number: invoice.number,
@@ -210,6 +223,7 @@ export class InvoicesService {
         dueDate: invoice.dueDate,
         status: invoice.status,
         billingPeriod: invoice.billingPeriod,
+        hash: invoice.hash,
         student: invoice.student,
         payments: invoice.payments.map((p) => ({
           amount: p.amount,
@@ -224,6 +238,7 @@ export class InvoicesService {
         taxId: invoice.tenant.taxId,
         address: invoice.tenant.address,
       },
+      verification,
     );
 
     return {
