@@ -22,10 +22,20 @@ export type AuthUser = {
 
 type LoginInput = { tenantSlug: string; email: string; password: string };
 
+export type SignupInput = {
+  tenantName: string;
+  tenantSlug: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+};
+
 type AuthContextValue = {
   user: AuthUser | null;
   isLoading: boolean;
   login: (input: LoginInput) => Promise<void>;
+  signup: (input: SignupInput) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -67,6 +77,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(me);
   }, []);
 
+  const signup = useCallback(async (input: SignupInput) => {
+    const { accessToken } = await api<{ accessToken: string }>('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(input),
+      skipAuth: true,
+    });
+    setAccessToken(accessToken);
+    const me = await api<AuthUser>('/users/me');
+    setUser(me);
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await api('/auth/logout', { method: 'POST' });
@@ -77,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );
