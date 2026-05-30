@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { InvoiceStatus, PaymentMethod, Prisma } from '@prisma/client';
+import { InvoiceStatus, InvoiceType, PaymentMethod, Prisma } from '@prisma/client';
 
 type Payment = {
   amount: Prisma.Decimal;
@@ -19,6 +19,8 @@ type InvoiceForPdf = {
   status: InvoiceStatus;
   billingPeriod: string | null;
   hash: string | null;
+  type: InvoiceType;
+  rectifiedNumber: string | null;
   student: {
     firstName: string;
     lastName: string;
@@ -112,25 +114,40 @@ export function buildInvoicePdf(
     }
 
     const rightX = 350;
+    const isRectificativa = invoice.type === 'RECTIFICATIVA';
     doc
       .fillColor('#111827')
       .font('Helvetica-Bold')
-      .fontSize(16)
-      .text('FACTURA', rightX, 50, { width: 195, align: 'right' });
+      .fontSize(isRectificativa ? 13 : 16)
+      .text(isRectificativa ? 'FACTURA RECTIFICATIVA' : 'FACTURA', rightX, 50, {
+        width: 195,
+        align: 'right',
+      });
     doc
       .font('Helvetica')
       .fontSize(10)
       .fillColor('#111827')
       .text(invoice.number, rightX, 72, { width: 195, align: 'right' });
+    let headerY = 88;
+    if (isRectificativa && invoice.rectifiedNumber) {
+      doc
+        .fillColor('#b45309')
+        .fontSize(9)
+        .text(`Rectifica a ${invoice.rectifiedNumber}`, rightX, headerY, {
+          width: 195,
+          align: 'right',
+        });
+      headerY += 12;
+    }
     doc
       .fillColor('#6b7280')
       .fontSize(9)
-      .text(`Fecha: ${fmtDate(invoice.issueDate)}`, rightX, 88, {
+      .text(`Fecha: ${fmtDate(invoice.issueDate)}`, rightX, headerY, {
         width: 195,
         align: 'right',
       });
     if (invoice.dueDate) {
-      doc.text(`Vencimiento: ${fmtDate(invoice.dueDate)}`, rightX, 100, {
+      doc.text(`Vencimiento: ${fmtDate(invoice.dueDate)}`, rightX, headerY + 12, {
         width: 195,
         align: 'right',
       });

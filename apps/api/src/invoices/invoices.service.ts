@@ -6,6 +6,7 @@ import {
 import { InvoiceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { CreateRectificationDto } from './dto/create-rectification.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ListInvoicesDto } from './dto/list-invoices.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
@@ -35,6 +36,58 @@ export class InvoicesService {
     );
   }
 
+  /**
+   * Issues a rectificativa "por sustitución": creates a new chained invoice of
+   * type RECTIFICATIVA pointing at the original, and cancels the original so it
+   * no longer counts toward totals / SEPA. The original stays immutable in the
+   * hash chain for the audit trail.
+   */
+  async createRectification(
+    tenantId: string,
+    originalId: string,
+    dto: CreateRectificationDto,
+  ) {
+    const original = await this.prisma.invoice.findFirst({
+      where: { id: originalId, tenantId },
+    });
+    if (!original) throw new NotFoundException();
+    if (original.type === 'RECTIFICATIVA') {
+      throw new BadRequestException(
+        'No se puede rectificar una factura rectificativa',
+      );
+    }
+    if (original.status === 'CANCELLED') {
+      throw new BadRequestException(
+        'No se puede rectificar una factura ya anulada',
+      );
+    }
+    const alreadyRectified = await this.prisma.invoice.findFirst({
+      where: { rectifiesId: originalId },
+      select: { id: true },
+    });
+    if (alreadyRectified) {
+      throw new BadRequestException('Esta factura ya tiene una rectificativa');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const rectification = await createChainedInvoice(tx, tenantId, {
+        studentId: original.studentId,
+        amount: new Prisma.Decimal(dto.amount),
+        description: `Rectificativa de ${original.number} — ${dto.reason}`,
+        issueDate: new Date(),
+        type: 'RECTIFICATIVA',
+        rectifiesId: original.id,
+      });
+
+      await tx.invoice.update({
+        where: { id: original.id },
+        data: { status: 'CANCELLED' },
+      });
+
+      return rectification;
+    });
+  }
+
   findAll(tenantId: string, filters: ListInvoicesDto) {
     const where: Prisma.InvoiceWhereInput = { tenantId };
     if (filters.studentId) where.studentId = filters.studentId;
@@ -58,6 +111,8 @@ export class InvoicesService {
         student: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
+        rectifies: { select: { id: true, number: true } },
+        rectifiedBy: { select: { id: true, number: true } },
       },
     });
     if (!invoice) throw new NotFoundException();
@@ -196,6 +251,7 @@ export class InvoicesService {
             address: true,
           },
         },
+        rectifies: { select: { number: true } },
       },
     });
     if (!invoice) throw new NotFoundException();
@@ -224,6 +280,8 @@ export class InvoicesService {
         status: invoice.status,
         billingPeriod: invoice.billingPeriod,
         hash: invoice.hash,
+        type: invoice.type,
+        rectifiedNumber: invoice.rectifies?.number ?? null,
         student: invoice.student,
         payments: invoice.payments.map((p) => ({
           amount: p.amount,

@@ -17,6 +17,7 @@ import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { CreateRectificationDto } from './dto/create-rectification.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ListInvoicesDto } from './dto/list-invoices.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
@@ -58,6 +59,15 @@ export class InvoicesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
     return this.invoicesService.remove(tenantId, id);
+  }
+
+  @Post(':id/rectifications')
+  rectify(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateRectificationDto,
+  ) {
+    return this.invoicesService.createRectification(tenantId, id, dto);
   }
 
   @Get(':id/pdf')

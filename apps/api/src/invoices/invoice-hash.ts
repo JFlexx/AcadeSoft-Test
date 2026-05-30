@@ -18,7 +18,7 @@
 //   ever needs multiple fiscal identities, we'd need separate chains.
 
 import { createHash } from 'crypto';
-import { Prisma } from '@prisma/client';
+import { InvoiceType, Prisma } from '@prisma/client';
 
 export type ChainedInvoiceInput = {
   studentId: string;
@@ -29,6 +29,8 @@ export type ChainedInvoiceInput = {
   notes?: string | null;
   issueDate: Date;
   dueDate?: Date | null;
+  type?: InvoiceType;
+  rectifiesId?: string | null;
 };
 
 type TxClient = Prisma.TransactionClient;
@@ -108,6 +110,8 @@ export async function createChainedInvoice(
       notes: input.notes ?? undefined,
       issueDate: input.issueDate,
       dueDate: input.dueDate ?? undefined,
+      type: input.type ?? undefined,
+      rectifiesId: input.rectifiesId ?? undefined,
       hash,
       previousHash: tenant.lastInvoiceHash, // null for the first invoice ever
       hashedAt: new Date(),
