@@ -60,6 +60,11 @@ enum InvoiceStatus {
   CANCELLED
 }
 
+enum InvoiceType {
+  ORIGINAL
+  RECTIFICATIVA
+}
+
 enum PaymentMethod {
   CASH
   CARD
@@ -335,22 +340,27 @@ model Invoice {
   issueDate     DateTime      @default(now())
   dueDate       DateTime?
   status        InvoiceStatus @default(PENDING)
+  type          InvoiceType   @default(ORIGINAL)
+  rectifiesId   String?
   hash          String?
   previousHash  String?
   hashedAt      DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  student    Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  enrollment Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
-  payments   Payment[]
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrollment  Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  payments    Payment[]
+  rectifies   Invoice?    @relation("InvoiceRectification", fields: [rectifiesId], references: [id], onDelete: SetNull)
+  rectifiedBy Invoice[]   @relation("InvoiceRectification")
 
   @@unique([tenantId, number])
   @@unique([enrollmentId, billingPeriod])
   @@index([tenantId, status])
   @@index([tenantId, issueDate])
   @@index([studentId])
+  @@index([rectifiesId])
   @@map("invoices")
 }
 
