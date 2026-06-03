@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -26,6 +27,9 @@ export class AuthController {
     private readonly config: ConfigService,
   ) {}
 
+  // Public self-service onboarding: tightly capped to stop bots from
+  // mass-creating tenants. 3 per hour per IP.
+  @Throttle({ default: { limit: 3, ttl: 60 * 60 * 1000 } })
   @Post('signup')
   async signup(@Body() dto: SignupDto, @Res({ passthrough: true }) res: Response) {
     const { accessToken, refreshToken } = await this.authService.signup(dto);
@@ -40,6 +44,8 @@ export class AuthController {
     return { accessToken };
   }
 
+  // Brute-force guard: 5 attempts per minute per IP.
+  @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {

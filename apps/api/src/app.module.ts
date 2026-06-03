@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -18,6 +20,22 @@ import { SettingsModule } from './settings/settings.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Global rate limiting (defense-in-depth). A generous default covers every
+    // route; auth endpoints tighten this via @Throttle. Disable entirely with
+    // THROTTLE_DISABLED=true (used by the e2e suites that hammer /auth/login).
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: config.get<number>('THROTTLE_TTL', 60_000),
+            limit: config.get<number>('THROTTLE_LIMIT', 120),
+          },
+        ],
+        skipIf: () => config.get<string>('THROTTLE_DISABLED') === 'true',
+      }),
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -33,5 +51,6 @@ import { SettingsModule } from './settings/settings.module';
     SettingsModule,
   ],
   controllers: [HealthController],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}
