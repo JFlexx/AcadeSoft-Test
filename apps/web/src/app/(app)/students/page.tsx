@@ -1,7 +1,9 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
+import { confirmToast } from '@/lib/confirm';
 
 type Student = {
   id: string;
@@ -106,6 +108,7 @@ export default function StudentsPage() {
         });
       }
       cancel();
+      toast.success(editing ? 'Alumno actualizado' : 'Alumno creado');
       await refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error de red');
@@ -115,12 +118,16 @@ export default function StudentsPage() {
   }
 
   async function handleDelete(s: Student) {
-    if (!window.confirm(`¿Borrar a ${s.firstName} ${s.lastName}?`)) return;
+    const ok = await confirmToast(`¿Borrar a ${s.firstName} ${s.lastName}?`, {
+      confirmLabel: 'Borrar',
+    });
+    if (!ok) return;
     try {
       await api(`/students/${s.id}`, { method: 'DELETE' });
+      toast.success('Alumno eliminado');
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     }
   }
 

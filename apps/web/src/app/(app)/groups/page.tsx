@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
+import { confirmToast } from '@/lib/confirm';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -132,6 +134,7 @@ export default function GroupsPage() {
         await api('/groups', { method: 'POST', body: JSON.stringify(payload) });
       }
       cancel();
+      toast.success(editing ? 'Grupo actualizado' : 'Grupo creado');
       await refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error de red');
@@ -141,13 +144,17 @@ export default function GroupsPage() {
   }
 
   async function handleDelete(g: Group) {
-    if (!window.confirm(`¿Borrar el grupo "${g.name}"? Se borrarán también sus inscripciones y sesiones.`))
-      return;
+    const ok = await confirmToast(`¿Borrar el grupo "${g.name}"?`, {
+      description: 'Se borrarán también sus inscripciones y sesiones.',
+      confirmLabel: 'Borrar',
+    });
+    if (!ok) return;
     try {
       await api(`/groups/${g.id}`, { method: 'DELETE' });
+      toast.success('Grupo eliminado');
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     }
   }
 

@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { api, apiBlob, ApiError } from '@/lib/api';
+import { confirmToast } from '@/lib/confirm';
 
 type GenerationStatus = 'CREATED' | 'SKIPPED' | 'NO_FEE' | 'WOULD_CREATE';
 
@@ -123,6 +125,13 @@ export default function BillingPage() {
         body: JSON.stringify({ month, year, dryRun }),
       });
       setResponse(res);
+      if (!dryRun) {
+        toast.success(
+          res.summary.created > 0
+            ? `${res.summary.created} factura(s) generada(s)`
+            : 'No había facturas nuevas que generar',
+        );
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error de red');
     } finally {
@@ -132,14 +141,13 @@ export default function BillingPage() {
 
   async function handleGenerate() {
     if (!response?.dryRun) {
-      if (
-        !window.confirm(
-          `Vas a generar las facturas de ${MONTHS[month - 1]} ${year} sin vista previa. ¿Continuar?`,
-        )
-      )
-        return;
+      const ok = await confirmToast(
+        `Generar las facturas de ${MONTHS[month - 1]} ${year} sin vista previa?`,
+        { confirmLabel: 'Generar' },
+      );
+      if (!ok) return;
     } else if (response.summary.wouldCreate === 0) {
-      window.alert('No hay nada que generar para este periodo.');
+      toast.info('No hay nada que generar para este periodo.');
       return;
     }
     await run(false);
@@ -181,6 +189,7 @@ export default function BillingPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      toast.success('Remesa SEPA descargada');
     } catch (err) {
       setSepaError(err instanceof ApiError ? err.message : 'Error descargando XML');
     } finally {
