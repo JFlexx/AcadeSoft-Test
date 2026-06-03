@@ -13,6 +13,8 @@ type InvoiceStatus =
   | 'OVERDUE'
   | 'CANCELLED';
 
+type InvoiceType = 'ORIGINAL' | 'RECTIFICATIVA';
+
 type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER';
 
 type Payment = {
@@ -41,6 +43,10 @@ type Invoice = {
   issueDate: string;
   dueDate: string | null;
   status: InvoiceStatus;
+  type: InvoiceType;
+  rectifiesId: string | null;
+  rectifies: { id: string; number: string } | null;
+  rectifiedBy: { id: string; number: string }[];
   student: Student;
   payments: Payment[];
 };
@@ -78,6 +84,8 @@ const EMPTY_PAYMENT = {
   notes: '',
 };
 
+const EMPTY_RECT = { amount: '', reason: '' };
+
 function formatEur(value: string | number): string {
   return new Intl.NumberFormat('es-ES', {
     style: 'currency',
@@ -113,6 +121,11 @@ export default function InvoiceDetailPage() {
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
+  const [showRectForm, setShowRectForm] = useState(false);
+  const [rectForm, setRectForm] = useState(EMPTY_RECT);
+  const [rectSubmitting, setRectSubmitting] = useState(false);
+  const [rectError, setRectError] = useState<string | null>(null);
+
   const [cancelling, setCancelling] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
@@ -138,10 +151,7 @@ export default function InvoiceDetailPage() {
   function openPaymentForm() {
     if (!invoice) return;
     const pending = Number(invoice.amount) - Number(invoice.paidAmount);
-    setPaymentForm({
-      ...EMPTY_PAYMENT,
-      amount: pending.toFixed(2),
-    });
+    setPaymentForm({ ...EMPTY_PAYMENT, amount: pending.toFixed(2) });
     setShowPaymentForm(true);
     setPaymentError(null);
   }
@@ -161,9 +171,8 @@ export default function InvoiceDetailPage() {
         amount: Number(paymentForm.amount),
         method: paymentForm.method,
       };
-      if (paymentForm.paidAt) {
+      if (paymentForm.paidAt)
         payload.paidAt = new Date(paymentForm.paidAt).toISOString();
-      }
       if (paymentForm.reference.trim())
         payload.reference = paymentForm.reference.trim();
       if (paymentForm.notes.trim()) payload.notes = paymentForm.notes.trim();
@@ -210,7 +219,9 @@ export default function InvoiceDetailPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error descargando PDF');
+      window.alert(
+        err instanceof ApiError ? err.message : 'Error descargando PDF',
+      );
     } finally {
       setDownloadingPdf(false);
     }
@@ -234,6 +245,28 @@ export default function InvoiceDetailPage() {
       window.alert(err instanceof ApiError ? err.message : 'Error de red');
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function handleRectSubmit(e: FormEvent) {
+    e.preventDefault();
+    setRectSubmitting(true);
+    setRectError(null);
+    try {
+      await api(`/invoices/${invoiceId}/rectifications`, {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: Number(rectForm.amount),
+          reason: rectForm.reason.trim(),
+        }),
+      });
+      setShowRectForm(false);
+      setRectForm(EMPTY_RECT);
+      await refresh();
+    } catch (err) {
+      setRectError(err instanceof ApiError ? err.message : 'Error de red');
+    } finally {
+      setRectSubmitting(false);
     }
   }
 
@@ -263,6 +296,10 @@ export default function InvoiceDetailPage() {
     invoice.status !== 'CANCELLED' && invoice.status !== 'PAID';
   const canCancel =
     invoice.status !== 'CANCELLED' && invoice.status !== 'PAID';
+  const canRectify =
+    invoice.type === 'ORIGINAL' &&
+    invoice.status !== 'CANCELLED' &&
+    invoice.rectifiedBy.length === 0;
 
   return (
     <div className="p-6 max-w-4xl">
@@ -274,19 +311,49 @@ export default function InvoiceDetailPage() {
 
       <header className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-semibold font-mono">{invoice.number}</h1>
             <span
               className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLE[invoice.status]}`}
             >
               {STATUS_LABEL[invoice.status]}
             </span>
+            {invoice.type === 'RECTIFICATIVA' && (
+              <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium">
+                RECTIFICATIVA
+              </span>
+            )}
           </div>
           {invoice.description && (
             <p className="text-sm text-gray-600 mt-1">{invoice.description}</p>
           )}
+          {invoice.type === 'RECTIFICATIVA' && invoice.rectifies && (
+            <p className="text-sm text-gray-500 mt-1">
+              Rectifica a{' '}
+              <Link
+                href={`/invoices/${invoice.rectifies.id}`}
+                className="text-brand-700 hover:underline font-mono"
+              >
+                {invoice.rectifies.number}
+              </Link>
+            </p>
+          )}
+          {invoice.rectifiedBy.length > 0 && (
+            <p className="text-sm text-amber-700 mt-1">
+              Rectificada por{' '}
+              {invoice.rectifiedBy.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/invoices/${r.id}`}
+                  className="underline font-mono"
+                >
+                  {r.number}
+                </Link>
+              ))}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <button
             onClick={handleDownloadPdf}
             disabled={downloadingPdf}
@@ -294,6 +361,21 @@ export default function InvoiceDetailPage() {
           >
             {downloadingPdf ? 'Descargando…' : 'Descargar PDF'}
           </button>
+          {canRectify && !showRectForm && (
+            <button
+              onClick={() => {
+                setShowRectForm(true);
+                setRectForm({
+                  amount: Number(invoice.amount).toFixed(2),
+                  reason: '',
+                });
+                setRectError(null);
+              }}
+              className="btn-secondary"
+            >
+              Emitir rectificativa
+            </button>
+          )}
           {canCancel && (
             <button
               onClick={handleCancelInvoice}
@@ -305,6 +387,76 @@ export default function InvoiceDetailPage() {
           )}
         </div>
       </header>
+
+      {showRectForm && (
+        <form
+          onSubmit={handleRectSubmit}
+          className="border rounded p-4 mb-6 space-y-3 bg-amber-50 border-amber-200"
+        >
+          <h2 className="font-medium text-sm">
+            Nueva factura rectificativa — corrige{' '}
+            <span className="font-mono">{invoice.number}</span>
+          </h2>
+          <p className="text-xs text-gray-600">
+            La factura original quedará anulada. La rectificativa llevará el
+            importe corregido y su propio número en la cadena Verifactu.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs text-gray-600 block mb-1">
+                Importe corregido (€) *
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                value={rectForm.amount}
+                onChange={(e) =>
+                  setRectForm({ ...rectForm, amount: e.target.value })
+                }
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-gray-600 block mb-1">
+                Motivo *
+              </span>
+              <input
+                type="text"
+                required
+                maxLength={200}
+                placeholder="Ej. Error en el importe, descuento aplicado…"
+                value={rectForm.reason}
+                onChange={(e) =>
+                  setRectForm({ ...rectForm, reason: e.target.value })
+                }
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+            </label>
+          </div>
+          {rectError && <p className="text-sm text-red-600">{rectError}</p>}
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={rectSubmitting}
+              className="btn-primary"
+            >
+              {rectSubmitting ? 'Emitiendo…' : 'Emitir rectificativa'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowRectForm(false);
+                setRectError(null);
+              }}
+              className="btn-secondary"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
 
       <section className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-8 max-w-md">
         <span className="text-gray-500">Alumno</span>
@@ -471,7 +623,9 @@ export default function InvoiceDetailPage() {
             <tbody>
               {invoice.payments.map((p) => (
                 <tr key={p.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2 text-gray-600">{formatDateTime(p.paidAt)}</td>
+                  <td className="py-2 text-gray-600">
+                    {formatDateTime(p.paidAt)}
+                  </td>
                   <td className="py-2">{METHOD_LABEL[p.method]}</td>
                   <td className="py-2 text-gray-600">{p.reference ?? '—'}</td>
                   <td className="py-2 text-gray-600 max-w-xs truncate">
