@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
+  LayoutDashboard,
   Users,
   GraduationCap,
   BookOpen,
@@ -18,6 +19,7 @@ import {
 import { useAuth } from '@/lib/auth-context';
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/', label: 'Inicio', icon: LayoutDashboard },
   { href: '/students', label: 'Alumnos', icon: Users },
   { href: '/teachers', label: 'Profesores', icon: GraduationCap },
   { href: '/courses', label: 'Cursos', icon: BookOpen },
@@ -69,7 +71,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 p-2 space-y-0.5">
           {NAV.map((item) => {
             const active =
-              pathname === item.href || pathname.startsWith(item.href + '/');
+              item.href === '/'
+                ? pathname === '/'
+                : pathname === item.href || pathname.startsWith(item.href + '/');
             const Icon = item.icon;
             return (
               <Link

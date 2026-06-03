@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && user) router.replace('/me');
+    if (!isLoading && user) router.replace('/');
   }, [isLoading, user, router]);
 
   async function handleSubmit(e: FormEvent) {
@@ -25,7 +25,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login({ tenantSlug, email, password });
-      router.replace('/me');
+      router.replace('/');
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError('Credenciales inválidas');

@@ -52,7 +52,7 @@ export default function SignupPage() {
         email: email.trim(),
         password,
       });
-      router.replace('/settings');
+      router.replace('/');
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {

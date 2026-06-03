@@ -1,10 +1,7 @@
-export default function HomePage() {
-  return (
-    <main className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold">AcadeSoft</h1>
-        <p className="text-sm text-gray-500 mt-2">Scaffold listo. Sprint 1 base.</p>
-      </div>
-    </main>
-  );
+import { redirect } from 'next/navigation';
+
+// The dashboard lives at (app)/page.tsx which carries the auth layout.
+// This root page is only reached if Next.js somehow doesn't resolve (app)/page.
+export default function RootPage() {
+  redirect('/');
 }
