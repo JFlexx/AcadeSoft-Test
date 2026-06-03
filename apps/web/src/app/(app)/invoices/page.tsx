@@ -12,6 +12,8 @@ type InvoiceStatus =
   | 'OVERDUE'
   | 'CANCELLED';
 
+type InvoiceType = 'ORIGINAL' | 'RECTIFICATIVA';
+
 type Invoice = {
   id: string;
   studentId: string;
@@ -22,6 +24,7 @@ type Invoice = {
   issueDate: string;
   dueDate: string | null;
   status: InvoiceStatus;
+  type: InvoiceType;
 };
 
 type Student = { id: string; firstName: string; lastName: string };
@@ -347,11 +350,18 @@ export default function InvoicesPage() {
                     {i.status === 'CANCELLED' ? '—' : formatEur(pending)}
                   </td>
                   <td className="py-2">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLE[i.status]}`}
-                    >
-                      {STATUS_LABEL[i.status]}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLE[i.status]}`}
+                      >
+                        {STATUS_LABEL[i.status]}
+                      </span>
+                      {i.type === 'RECTIFICATIVA' && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                          R
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
