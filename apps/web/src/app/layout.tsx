@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Toaster } from 'sonner';
 import { AuthProvider } from '@/lib/auth-context';
 import './globals.css';
 
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={inter.variable}>
       <body className="font-sans text-gray-900 antialiased">
         <AuthProvider>{children}</AuthProvider>
+        <Toaster richColors closeButton position="top-right" />
       </body>
     </html>
   );

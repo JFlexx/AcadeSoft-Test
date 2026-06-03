@@ -3,7 +3,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
+import { confirmToast } from '@/lib/confirm';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -168,6 +170,7 @@ export default function GroupDetailPage() {
       });
       setEnrollOpen(false);
       setEnrollStudentId('');
+      toast.success('Alumno inscrito');
       await refresh();
     } catch (err) {
       setEnrollError(err instanceof ApiError ? err.message : 'Error de red');
@@ -186,17 +189,21 @@ export default function GroupDetailPage() {
       });
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     }
   }
 
   async function handleUnenroll(enrollmentId: string, studentName: string) {
-    if (!window.confirm(`¿Quitar a ${studentName} del grupo?`)) return;
+    const ok = await confirmToast(`¿Quitar a ${studentName} del grupo?`, {
+      confirmLabel: 'Quitar',
+    });
+    if (!ok) return;
     try {
       await api(`/enrollments/${enrollmentId}`, { method: 'DELETE' });
+      toast.success('Alumno dado de baja del grupo');
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     }
   }
 
@@ -215,7 +222,7 @@ export default function GroupDetailPage() {
       } else {
         const n = Number(trimmed);
         if (Number.isNaN(n) || n < 0) {
-          window.alert('Cuota inválida');
+          toast.error('Cuota inválida');
           return;
         }
         payload.monthlyFeeOverride = n;
@@ -229,9 +236,10 @@ export default function GroupDetailPage() {
         delete next[enrollment.id];
         return next;
       });
+      toast.success('Cuota actualizada');
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     } finally {
       setFeeSaving(null);
     }
@@ -292,6 +300,7 @@ export default function GroupDetailPage() {
         });
       }
       cancelSessionForm();
+      toast.success(editingSession ? 'Sesión actualizada' : 'Sesión creada');
       await refresh();
     } catch (err) {
       setSessionError(err instanceof ApiError ? err.message : 'Error de red');
@@ -301,12 +310,17 @@ export default function GroupDetailPage() {
   }
 
   async function handleDeleteSession(s: Session) {
-    if (!window.confirm(`¿Borrar la sesión del ${formatDateTime(s.scheduledAt)}?`)) return;
+    const ok = await confirmToast(
+      `¿Borrar la sesión del ${formatDateTime(s.scheduledAt)}?`,
+      { confirmLabel: 'Borrar' },
+    );
+    if (!ok) return;
     try {
       await api(`/sessions/${s.id}`, { method: 'DELETE' });
+      toast.success('Sesión eliminada');
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     }
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 
 type Course = { id: string; name: string };
@@ -184,6 +185,7 @@ export default function SessionDetailPage() {
         body: JSON.stringify({ items }),
       });
       setSavedAt(new Date());
+      toast.success('Asistencia guardada');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error de red');
     } finally {
@@ -207,7 +209,7 @@ export default function SessionDetailPage() {
       });
       setSession(updated);
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     } finally {
       setStatusUpdating(false);
     }

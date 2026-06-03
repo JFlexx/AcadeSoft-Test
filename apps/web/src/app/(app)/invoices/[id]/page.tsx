@@ -3,7 +3,9 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { api, apiBlob, ApiError } from '@/lib/api';
+import { confirmToast } from '@/lib/confirm';
 
 type InvoiceStatus =
   | 'DRAFT'
@@ -182,6 +184,7 @@ export default function InvoiceDetailPage() {
         body: JSON.stringify(payload),
       });
       closePaymentForm();
+      toast.success('Pago registrado');
       await refresh();
     } catch (err) {
       setPaymentError(err instanceof ApiError ? err.message : 'Error de red');
@@ -191,17 +194,20 @@ export default function InvoiceDetailPage() {
   }
 
   async function handleDeletePayment(p: Payment) {
-    if (
-      !window.confirm(
-        `¿Eliminar el pago de ${formatEur(p.amount)} del ${formatDate(p.paidAt)}? Se recalculará el estado de la factura.`,
-      )
-    )
-      return;
+    const ok = await confirmToast(
+      `¿Eliminar el pago de ${formatEur(p.amount)} del ${formatDate(p.paidAt)}?`,
+      {
+        description: 'Se recalculará el estado de la factura.',
+        confirmLabel: 'Eliminar',
+      },
+    );
+    if (!ok) return;
     try {
       await api(`/payments/${p.id}`, { method: 'DELETE' });
+      toast.success('Pago eliminado');
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     }
   }
 
@@ -219,7 +225,7 @@ export default function InvoiceDetailPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      window.alert(
+      toast.error(
         err instanceof ApiError ? err.message : 'Error descargando PDF',
       );
     } finally {
@@ -228,21 +234,22 @@ export default function InvoiceDetailPage() {
   }
 
   async function handleCancelInvoice() {
-    if (
-      !window.confirm(
-        '¿Anular esta factura? Después no aceptará más pagos. Esto no borra los pagos ya registrados.',
-      )
-    )
-      return;
+    const ok = await confirmToast('¿Anular esta factura?', {
+      description:
+        'Después no aceptará más pagos. Esto no borra los pagos ya registrados.',
+      confirmLabel: 'Anular',
+    });
+    if (!ok) return;
     setCancelling(true);
     try {
       await api(`/invoices/${invoiceId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'CANCELLED' }),
       });
+      toast.success('Factura anulada');
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     } finally {
       setCancelling(false);
     }
@@ -262,6 +269,7 @@ export default function InvoiceDetailPage() {
       });
       setShowRectForm(false);
       setRectForm(EMPTY_RECT);
+      toast.success('Rectificativa emitida');
       await refresh();
     } catch (err) {
       setRectError(err instanceof ApiError ? err.message : 'Error de red');

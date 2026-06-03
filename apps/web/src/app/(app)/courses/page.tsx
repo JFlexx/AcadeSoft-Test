@@ -1,7 +1,9 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
+import { confirmToast } from '@/lib/confirm';
 
 type Course = {
   id: string;
@@ -87,6 +89,7 @@ export default function CoursesPage() {
         await api('/courses', { method: 'POST', body: JSON.stringify(payload) });
       }
       cancel();
+      toast.success(editing ? 'Curso actualizado' : 'Curso creado');
       await refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error de red');
@@ -96,17 +99,17 @@ export default function CoursesPage() {
   }
 
   async function handleDelete(c: Course) {
-    if (
-      !window.confirm(
-        `¿Borrar el curso "${c.name}"? Si tiene grupos asociados, debes borrarlos primero.`,
-      )
-    )
-      return;
+    const ok = await confirmToast(`¿Borrar el curso "${c.name}"?`, {
+      description: 'Si tiene grupos asociados, debes borrarlos primero.',
+      confirmLabel: 'Borrar',
+    });
+    if (!ok) return;
     try {
       await api(`/courses/${c.id}`, { method: 'DELETE' });
+      toast.success('Curso eliminado');
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Error de red');
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
     }
   }
 
