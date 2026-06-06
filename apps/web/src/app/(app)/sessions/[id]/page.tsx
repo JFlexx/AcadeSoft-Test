@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
+import { EmptyState } from '@/components/empty-state';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -310,13 +312,16 @@ export default function SessionDetailPage() {
         )}
 
         {rows.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            No hay alumnos activos en este grupo.{' '}
-            <Link href={`/groups/${group.id}`} className="hover:underline">
-              Inscribe alumnos
-            </Link>{' '}
-            antes de marcar asistencia.
-          </p>
+          <EmptyState
+            icon={Users}
+            title="No hay alumnos activos en este grupo"
+            description="Inscribe alumnos en el grupo antes de poder marcar la asistencia."
+            action={
+              <Link href={`/groups/${group.id}`} className="btn-primary">
+                Inscribir alumnos
+              </Link>
+            }
+          />
         ) : (
           <table className="w-full text-sm border-collapse">
             <thead>

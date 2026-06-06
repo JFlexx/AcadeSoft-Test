@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Receipt } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
+import { EmptyState } from '@/components/empty-state';
 
 type InvoiceStatus =
   | 'DRAFT'
@@ -178,12 +180,6 @@ export default function InvoicesPage() {
         )}
       </header>
 
-      {students.length === 0 && !loading && (
-        <p className="text-sm text-gray-500 mb-4">
-          Necesitas tener alumnos antes de poder emitir facturas.
-        </p>
-      )}
-
       {showForm && (
         <form
           onSubmit={handleSubmit}
@@ -303,11 +299,32 @@ export default function InvoicesPage() {
 
       {loading ? (
         <p className="text-sm text-gray-500">Cargando…</p>
+      ) : invoices.length === 0 ? (
+        <EmptyState
+          icon={Receipt}
+          title="Todavía no hay facturas"
+          description={
+            students.length === 0
+              ? 'Necesitas tener alumnos antes de poder emitir facturas.'
+              : 'Emite tu primera factura, o genera las mensualidades del mes desde la sección Mensualidades.'
+          }
+          action={
+            students.length === 0 ? (
+              <Link href="/students" className="btn-primary">
+                Crear un alumno
+              </Link>
+            ) : (
+              !showForm && (
+                <button onClick={startCreate} className="btn-primary">
+                  + Nueva factura
+                </button>
+              )
+            )
+          }
+        />
       ) : filtered.length === 0 ? (
         <p className="text-sm text-gray-500">
-          {invoices.length === 0
-            ? 'Todavía no hay facturas. Crea la primera con el botón de arriba.'
-            : 'No hay facturas que coincidan con los filtros.'}
+          No hay facturas que coincidan con los filtros.
         </p>
       ) : (
         <table className="w-full text-sm border-collapse">

@@ -1,9 +1,11 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
+import { EmptyState } from '@/components/empty-state';
 
 type Course = {
   id: string;
@@ -191,9 +193,18 @@ export default function CoursesPage() {
       {loading ? (
         <p className="text-sm text-gray-500">Cargando…</p>
       ) : courses.length === 0 ? (
-        <p className="text-sm text-gray-500">
-          No hay cursos. Crea el primero con el botón de arriba.
-        </p>
+        <EmptyState
+          icon={BookOpen}
+          title="No hay cursos todavía"
+          description="Crea tu primer curso (p. ej. «Inglés B1» o «Piano»). Luego podrás organizar grupos dentro de él."
+          action={
+            !showForm && (
+              <button onClick={startCreate} className="btn-primary">
+                + Nuevo curso
+              </button>
+            )
+          }
+        />
       ) : (
         <table className="w-full text-sm border-collapse">
           <thead>

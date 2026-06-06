@@ -2,9 +2,11 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Users2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
+import { EmptyState } from '@/components/empty-state';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -182,12 +184,6 @@ export default function GroupsPage() {
         )}
       </header>
 
-      {courses.length === 0 && (
-        <p className="text-sm text-gray-500 mb-4">
-          No tienes cursos todavía. Crea un curso desde la API antes de poder añadir grupos.
-        </p>
-      )}
-
       {showForm && (
         <form
           onSubmit={handleSubmit}
@@ -321,9 +317,31 @@ export default function GroupsPage() {
       )}
 
       {groups.length === 0 ? (
-        <p className="text-sm text-gray-500">
-          No hay grupos. {courses.length > 0 && 'Crea el primero con el botón de arriba.'}
-        </p>
+        courses.length === 0 ? (
+          <EmptyState
+            icon={Users2}
+            title="No hay grupos todavía"
+            description="Los grupos van dentro de un curso. Crea primero un curso para poder añadir grupos."
+            action={
+              <Link href="/courses" className="btn-primary">
+                Crear un curso
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={Users2}
+            title="No hay grupos todavía"
+            description="Crea tu primer grupo dentro de un curso para inscribir alumnos y planificar sesiones."
+            action={
+              !showForm && (
+                <button onClick={startCreate} className="btn-primary">
+                  + Nuevo grupo
+                </button>
+              )
+            }
+          />
+        )
       ) : filtered.length === 0 ? (
         <p className="text-sm text-gray-500">Ningún grupo en ese curso.</p>
       ) : (

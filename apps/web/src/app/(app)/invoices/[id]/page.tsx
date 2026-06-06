@@ -3,9 +3,11 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { Banknote } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, apiBlob, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
+import { EmptyState } from '@/components/empty-state';
 
 type InvoiceStatus =
   | 'DRAFT'
@@ -615,7 +617,22 @@ export default function InvoiceDetailPage() {
         )}
 
         {invoice.payments.length === 0 ? (
-          <p className="text-sm text-gray-500">Aún no hay pagos registrados.</p>
+          <EmptyState
+            icon={Banknote}
+            title="Sin pagos registrados"
+            description={
+              canRegisterPayment
+                ? 'Registra los pagos que recibas para llevar el control de lo cobrado y lo pendiente.'
+                : 'Esta factura no admite nuevos pagos.'
+            }
+            action={
+              canRegisterPayment && !showPaymentForm ? (
+                <button onClick={openPaymentForm} className="btn-primary">
+                  + Registrar pago
+                </button>
+              ) : undefined
+            }
+          />
         ) : (
           <table className="w-full text-sm border-collapse">
             <thead>

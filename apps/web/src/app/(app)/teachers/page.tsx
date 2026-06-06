@@ -1,9 +1,11 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
+import { EmptyState } from '@/components/empty-state';
 
 type Teacher = {
   id: string;
@@ -200,9 +202,18 @@ export default function TeachersPage() {
       {loading ? (
         <p className="text-sm text-gray-500">Cargando…</p>
       ) : teachers.length === 0 ? (
-        <p className="text-sm text-gray-500">
-          No hay profesores. Crea el primero con el botón de arriba.
-        </p>
+        <EmptyState
+          icon={GraduationCap}
+          title="No hay profesores todavía"
+          description="Añade a tu primer profesor para poder asignarlo a grupos y sesiones."
+          action={
+            !showForm && (
+              <button onClick={startCreate} className="btn-primary">
+                + Nuevo profesor
+              </button>
+            )
+          }
+        />
       ) : (
         <table className="w-full text-sm border-collapse">
           <thead>
