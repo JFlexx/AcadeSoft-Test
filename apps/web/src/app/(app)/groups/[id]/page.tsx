@@ -3,9 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { Users, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
+import { EmptyState } from '@/components/empty-state';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -455,7 +457,29 @@ export default function GroupDetailPage() {
         )}
 
         {enrollments.length === 0 ? (
-          <p className="text-sm text-gray-500">Aún no hay alumnos inscritos.</p>
+          <EmptyState
+            icon={Users}
+            title="Sin alumnos inscritos"
+            description="Inscribe alumnos en este grupo para poder pasar lista y facturarles la cuota."
+            action={
+              students.length === 0 ? (
+                <Link href="/students" className="btn-primary">
+                  Crear alumnos
+                </Link>
+              ) : !enrollOpen ? (
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    setEnrollOpen(true);
+                    setEnrollStudentId(availableStudents[0]?.id ?? '');
+                    setEnrollError(null);
+                  }}
+                >
+                  + Inscribir alumno
+                </button>
+              ) : undefined
+            }
+          />
         ) : (
           <table className="w-full text-sm border-collapse">
             <thead>
@@ -629,7 +653,18 @@ export default function GroupDetailPage() {
         )}
 
         {sessions.length === 0 ? (
-          <p className="text-sm text-gray-500">No hay sesiones planificadas.</p>
+          <EmptyState
+            icon={CalendarClock}
+            title="Sin sesiones planificadas"
+            description="Crea sesiones para organizar las clases y registrar la asistencia de los alumnos."
+            action={
+              !showSessionForm && (
+                <button className="btn-primary" onClick={startCreateSession}>
+                  + Nueva sesión
+                </button>
+              )
+            }
+          />
         ) : (
           <table className="w-full text-sm border-collapse">
             <thead>
