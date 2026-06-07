@@ -19,6 +19,7 @@ type Student = {
   iban: string | null;
   mandateReference: string | null;
   mandateDate: string | null;
+  discountPercent: string | null;
   isActive: boolean;
 };
 
@@ -192,6 +193,11 @@ export default function StudentDetailPage() {
         ) : (
           <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500">
             Inactivo
+          </span>
+        )}
+        {student.discountPercent != null && Number(student.discountPercent) > 0 && (
+          <span className="text-xs px-2 py-0.5 rounded bg-brand-50 text-brand-700">
+            {Number(student.discountPercent)}% descuento
           </span>
         )}
       </header>
