@@ -4,9 +4,12 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class UpdateStudentDto {
@@ -64,6 +67,12 @@ export class UpdateStudentDto {
   @IsOptional()
   @IsDateString()
   mandateDate?: string;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(100)
+  discountPercent?: number;
 
   @IsOptional()
   @IsBoolean()
