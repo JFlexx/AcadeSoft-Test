@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { createChainedInvoice } from '../invoices/invoice-hash';
 import { GenerateMonthDto } from './dto/generate-month.dto';
@@ -47,7 +48,14 @@ export class BillingService {
     const enrollments = await this.prisma.enrollment.findMany({
       where: { status: 'ACTIVE', student: { tenantId } },
       include: {
-        student: { select: { id: true, firstName: true, lastName: true } },
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            discountPercent: true,
+          },
+        },
         group: { select: { id: true, name: true, monthlyFee: true } },
       },
       orderBy: [
@@ -75,11 +83,11 @@ export class BillingService {
     const results: GenerationItem[] = [];
 
     for (const e of enrollments) {
-      const fee = e.monthlyFeeOverride ?? e.group.monthlyFee;
+      const baseFee = e.monthlyFeeOverride ?? e.group.monthlyFee;
       const studentName = `${e.student.firstName} ${e.student.lastName}`;
       const groupName = e.group.name;
 
-      if (!fee) {
+      if (!baseFee) {
         results.push({
           enrollmentId: e.id,
           studentName,
@@ -90,6 +98,19 @@ export class BillingService {
         });
         continue;
       }
+
+      // Apply the student's family/sibling discount (percentage off the
+      // group/override fee), rounded to cents.
+      const pct = e.student.discountPercent;
+      const hasDiscount = pct != null && pct.gt(0);
+      const fee = hasDiscount
+        ? baseFee
+            .mul(new Prisma.Decimal(1).minus(pct.div(100)))
+            .toDecimalPlaces(2)
+        : baseFee;
+      const discountNote = hasDiscount
+        ? `Descuento ${pct.toString()}% sobre cuota base ${baseFee.toFixed(2)} €`
+        : null;
 
       const existingId = existingByEnrollment.get(e.id);
       if (existingId) {
@@ -123,6 +144,7 @@ export class BillingService {
           billingPeriod: period,
           amount: fee,
           description: `${groupName} — ${MONTH_NAMES_ES[dto.month - 1]} ${dto.year}`,
+          notes: discountNote,
           issueDate,
           dueDate,
         }),
