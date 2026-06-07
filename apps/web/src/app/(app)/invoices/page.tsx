@@ -2,9 +2,10 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Receipt } from 'lucide-react';
+import { Receipt, Download } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { EmptyState } from '@/components/empty-state';
+import { downloadCsv, csvAmount } from '@/lib/csv';
 
 type InvoiceStatus =
   | 'DRAFT'
@@ -142,6 +143,41 @@ export default function InvoicesPage() {
     setError(null);
   }
 
+  function handleExport() {
+    const headers = [
+      'Nº',
+      'Alumno',
+      'Concepto',
+      'Fecha emisión',
+      'Importe',
+      'Cobrado',
+      'Pendiente',
+      'Estado',
+      'Tipo',
+    ];
+    const rows = filtered.map((i) => {
+      const s = studentById[i.studentId];
+      const pending =
+        i.status === 'CANCELLED' ? 0 : Number(i.amount) - Number(i.paidAmount);
+      return [
+        i.number,
+        s ? `${s.firstName} ${s.lastName}` : '',
+        i.description ?? '',
+        formatDate(i.issueDate),
+        csvAmount(i.amount),
+        csvAmount(i.paidAmount),
+        csvAmount(pending),
+        STATUS_LABEL[i.status],
+        i.type === 'RECTIFICATIVA' ? 'Rectificativa' : 'Original',
+      ];
+    });
+    downloadCsv(
+      `facturas-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows,
+    );
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -168,16 +204,27 @@ export default function InvoicesPage() {
     <div className="p-6 max-w-5xl">
       <header className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Facturas</h1>
-        {!showForm && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={startCreate}
-            disabled={students.length === 0}
-            className="btn-primary"
-            title={students.length === 0 ? 'Crea primero un alumno' : ''}
+            onClick={handleExport}
+            disabled={filtered.length === 0}
+            className="btn-secondary"
+            title="Exportar las facturas filtradas a CSV"
           >
-            + Nueva factura
+            <Download className="h-4 w-4" />
+            Exportar CSV
           </button>
-        )}
+          {!showForm && (
+            <button
+              onClick={startCreate}
+              disabled={students.length === 0}
+              className="btn-primary"
+              title={students.length === 0 ? 'Crea primero un alumno' : ''}
+            >
+              + Nueva factura
+            </button>
+          )}
+        </div>
       </header>
 
       {showForm && (
