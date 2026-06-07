@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { EmptyState } from '@/components/empty-state';
+import { downloadIcs } from '@/lib/ics';
 
 type SessionStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 type Session = {
@@ -148,6 +149,26 @@ export default function CalendarPage() {
     setAnchor((prev) => (view === 'week' ? addDays(prev, delta * 7) : addMonths(prev, delta)));
   }
 
+  function handleExportIcs() {
+    const events = filtered.map((s) => {
+      const start = new Date(s.scheduledAt);
+      const end = new Date(start.getTime() + 60 * 60 * 1000); // 1h default
+      const teacher = teacherFor(s);
+      return {
+        uid: `${s.id}@acadesoft`,
+        start,
+        end,
+        summary: groupById[s.groupId]?.name ?? 'Sesión',
+        description: teacher ? `Profesor: ${teacher}` : undefined,
+        cancelled: s.status === 'CANCELLED',
+      };
+    });
+    downloadIcs(
+      `calendario-${new Date().toISOString().slice(0, 10)}.ics`,
+      events,
+    );
+  }
+
   const periodLabel =
     view === 'week' ? weekLabel(anchor) : monthLabel(anchor);
 
@@ -155,9 +176,20 @@ export default function CalendarPage() {
     <div className="p-6 max-w-6xl">
       <header className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h1 className="text-xl font-semibold">Calendario</h1>
-        <div className="inline-flex rounded-md border bg-white overflow-hidden">
-          <ViewTab label="Semana" active={view === 'week'} onClick={() => setView('week')} />
-          <ViewTab label="Mes" active={view === 'month'} onClick={() => setView('month')} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportIcs}
+            disabled={filtered.length === 0}
+            className="btn-secondary"
+            title="Exportar las sesiones a un archivo .ics (Google/Apple Calendar)"
+          >
+            <Download className="h-4 w-4" />
+            Exportar .ics
+          </button>
+          <div className="inline-flex rounded-md border bg-white overflow-hidden">
+            <ViewTab label="Semana" active={view === 'week'} onClick={() => setView('week')} />
+            <ViewTab label="Mes" active={view === 'month'} onClick={() => setView('month')} />
+          </div>
         </div>
       </header>
 
