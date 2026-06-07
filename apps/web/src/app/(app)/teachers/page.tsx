@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
@@ -229,7 +230,9 @@ export default function TeachersPage() {
             {teachers.map((t) => (
               <tr key={t.id} className="border-b hover:bg-gray-50">
                 <td className="py-2">
-                  {t.firstName} {t.lastName}
+                  <Link href={`/teachers/${t.id}`} className="hover:underline">
+                    {t.firstName} {t.lastName}
+                  </Link>
                 </td>
                 <td className="py-2 text-gray-600">{t.email ?? '—'}</td>
                 <td className="py-2 text-gray-600">{t.phone ?? '—'}</td>
