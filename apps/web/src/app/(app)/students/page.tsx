@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
@@ -262,7 +263,9 @@ export default function StudentsPage() {
             {students.map((s) => (
               <tr key={s.id} className="border-b hover:bg-gray-50">
                 <td className="py-2">
-                  {s.firstName} {s.lastName}
+                  <Link href={`/students/${s.id}`} className="hover:underline">
+                    {s.firstName} {s.lastName}
+                  </Link>
                 </td>
                 <td className="py-2 text-gray-600">{s.email ?? '—'}</td>
                 <td className="py-2 text-gray-600">{s.phone ?? '—'}</td>
