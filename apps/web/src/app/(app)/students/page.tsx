@@ -18,6 +18,7 @@ type Student = {
   iban: string | null;
   mandateReference: string | null;
   mandateDate: string | null;
+  discountPercent: string | null;
   isActive: boolean;
 };
 
@@ -29,6 +30,7 @@ const EMPTY_FORM = {
   iban: '',
   mandateReference: '',
   mandateDate: '',
+  discountPercent: '',
 };
 
 export default function StudentsPage() {
@@ -71,6 +73,7 @@ export default function StudentsPage() {
       iban: s.iban ?? '',
       mandateReference: s.mandateReference ?? '',
       mandateDate: s.mandateDate ? s.mandateDate.slice(0, 10) : '',
+      discountPercent: s.discountPercent != null ? String(s.discountPercent) : '',
     });
     setShowForm(true);
     setError(null);
@@ -92,6 +95,7 @@ export default function StudentsPage() {
       'IBAN',
       'Ref. mandato',
       'Fecha mandato',
+      'Descuento %',
       'Estado',
     ];
     const rows = students.map((s) => [
@@ -102,6 +106,7 @@ export default function StudentsPage() {
       s.iban ?? '',
       s.mandateReference ?? '',
       s.mandateDate ? new Date(s.mandateDate).toLocaleDateString('es-ES') : '',
+      s.discountPercent != null ? String(s.discountPercent) : '',
       s.isActive ? 'Activo' : 'Inactivo',
     ]);
     downloadCsv(
@@ -116,7 +121,7 @@ export default function StudentsPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const payload: Record<string, string> = {
+      const payload: Record<string, string | number | null> = {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
       };
@@ -127,6 +132,9 @@ export default function StudentsPage() {
         payload.mandateReference = form.mandateReference.trim();
       if (form.mandateDate)
         payload.mandateDate = new Date(form.mandateDate).toISOString();
+      if (form.discountPercent.trim())
+        payload.discountPercent = Number(form.discountPercent);
+      else if (editing) payload.discountPercent = null; // allow clearing
 
       if (editing) {
         await api(`/students/${editing.id}`, {
@@ -219,6 +227,26 @@ export default function StudentsPage() {
               value={form.phone}
               onChange={(v) => setForm({ ...form, phone: v })}
             />
+            <label className="block">
+              <span className="text-xs text-gray-600 block mb-1">
+                Descuento (%)
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                value={form.discountPercent}
+                onChange={(e) =>
+                  setForm({ ...form, discountPercent: e.target.value })
+                }
+                placeholder="0"
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+              <span className="text-xs text-gray-400 mt-1 block">
+                Descuento familia/hermanos sobre la cuota mensual.
+              </span>
+            </label>
           </div>
 
           <fieldset className="border-t pt-3 space-y-3">
