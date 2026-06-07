@@ -2,11 +2,12 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users } from 'lucide-react';
+import { Users, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { EmptyState } from '@/components/empty-state';
+import { downloadCsv } from '@/lib/csv';
 
 type Student = {
   id: string;
@@ -82,6 +83,34 @@ export default function StudentsPage() {
     setError(null);
   }
 
+  function handleExport() {
+    const headers = [
+      'Nombre',
+      'Apellidos',
+      'Email',
+      'Teléfono',
+      'IBAN',
+      'Ref. mandato',
+      'Fecha mandato',
+      'Estado',
+    ];
+    const rows = students.map((s) => [
+      s.firstName,
+      s.lastName,
+      s.email ?? '',
+      s.phone ?? '',
+      s.iban ?? '',
+      s.mandateReference ?? '',
+      s.mandateDate ? new Date(s.mandateDate).toLocaleDateString('es-ES') : '',
+      s.isActive ? 'Activo' : 'Inactivo',
+    ]);
+    downloadCsv(
+      `alumnos-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows,
+    );
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -138,14 +167,22 @@ export default function StudentsPage() {
     <div className="p-6 max-w-3xl">
       <header className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Alumnos</h1>
-        {!showForm && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={startCreate}
-            className="btn-primary"
+            onClick={handleExport}
+            disabled={students.length === 0}
+            className="btn-secondary"
+            title="Exportar alumnos a CSV"
           >
-            + Nuevo alumno
+            <Download className="h-4 w-4" />
+            Exportar CSV
           </button>
-        )}
+          {!showForm && (
+            <button onClick={startCreate} className="btn-primary">
+              + Nuevo alumno
+            </button>
+          )}
+        </div>
       </header>
 
       {showForm && (
