@@ -2,6 +2,10 @@
 
 SaaS moderno de gestión para academias. Multi-tenant desde el diseño.
 
+> **¿Qué hace el producto, en lenguaje no técnico?** Ver
+> [docs/funcionalidades.md](docs/funcionalidades.md) — pensado para un socio o
+> cliente sin conocimientos de programación.
+
 ## Stack
 
 - **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS
@@ -31,7 +35,7 @@ pnpm install
 docker compose -f docker/docker-compose.yml up -d
 cp .env.example apps/api/.env
 echo 'NEXT_PUBLIC_API_URL="http://localhost:3001"' > apps/web/.env.local
-pnpm --filter api prisma:migrate
+pnpm --filter api exec prisma migrate deploy
 pnpm --filter api prisma:seed
 pnpm dev
 ```
@@ -40,6 +44,11 @@ Credenciales por defecto tras el seed (overrideables con `SEED_*` en `.env`):
 `tenantSlug: acme` · `email: admin@acme.local` · `password: ChangeMe123!`
 
 Login desde UI: http://localhost:3000/login
+
+**Datos de demostración** (recomendado para enseñar el producto): con la API ya
+arrancada, `node scripts/seed-demo.mjs` puebla una "Academia Demo" con
+profesores, grupos, alumnos (con SEPA y descuentos), clases, asistencia y
+facturas con pagos.
 
 ## Tests
 
@@ -63,21 +72,21 @@ Cada `it()` arranca con la BD truncada y un seed mínimo (1 tenant + 1 admin rol
 
 ## Documentación
 
+- [**Funcionalidades (no técnico)**](docs/funcionalidades.md) — qué cubre el producto, para un socio o cliente
 - [Arquitectura](docs/architecture.md)
 - [Convenciones de código y naming](docs/conventions.md)
-- [Cómo arrancar](docs/getting-started.md)
+- [Cómo arrancar y demo](docs/getting-started.md)
 
 ## Git flow
 
-Usamos **Git Flow** clásico:
+PRs **pequeños y directos a `main`** (desde 2026-05-20; nada en producción aún).
 
 | Rama | Propósito |
 |---|---|
-| `main` | Producción, siempre estable. Solo recibe merges desde `develop` o `hotfix/*`. |
-| `develop` | Rama de integración. Todas las features se mergean aquí. |
-| `feature/*` | Nuevas funcionalidades. Parten de `develop`, vuelven a `develop`. |
-| `fix/*` | Correcciones no urgentes. Parten de `develop`. |
-| `hotfix/*` | Correcciones urgentes en producción. Parten de `main` y se mergean a `main` y `develop`. |
+| `main` | Rama estable. Recibe merges de `feature/*`, `fix/*`, `chore/*` vía PR. |
+| `feature/*` | Nuevas funcionalidades. Parten de `main`, vuelven a `main`. |
+| `fix/*` | Correcciones. Parten de `main`. |
+| `chore/*` | Mantenimiento (deps, tooling, higiene de repo). |
 
 ### Convenciones de commit
 
@@ -97,31 +106,30 @@ Ejemplos:
 - No mezclar refactors con features en el mismo PR.
 - Deuda técnica: abrir issue aparte, no colar en el PR actual.
 
-## Estado actual — Sprint 1
+## Estado
 
-- [x] Scaffold monorepo (pnpm + apps + packages + docs + docker)
-- [x] Skeleton NestJS con `/health`
-- [x] Skeleton Next.js con home mínima
-- [x] `packages/config` (tsconfig/eslint/prettier base)
-- [x] `packages/types` (vacío, listo para llenar)
-- [x] **Modelo de datos Prisma (MVP)** — `apps/api/prisma/schema.prisma`
-- [x] **Módulo Auth (JWT + refresh)** — `apps/api/src/auth` + `GET /users/me`
-- [x] **Seed inicial de datos** — `apps/api/prisma/seed.ts` (tenant demo + 3 roles + admin)
-- [x] **Login UI conectado** — `/login` y `/me` en `apps/web` consumen la API real (auth context + refresh silencioso)
-- [x] **Layout autenticado + UI de `students`** — sidebar nav, auth guard centralizado, CRUD inline contra `/students`
-- [x] **UI de `groups` + detalle con inscripciones** — `/groups` (lista + form, filtro por curso) y `/groups/[id]` (info + alta/baja/cambio de estado de alumnos)
-- [x] **Gestión de sesiones en detalle de grupo** — `/groups/[id]` ahora incluye sección "Sesiones" con CRUD inline (datetime-local, profesor pre-poblado del grupo)
-- [x] **UI de detalle de sesión + asistencia** — `/sessions/[id]` con tabla de asistencia (PRESENT por defecto), bulk save atómico, cambio de estado de la sesión
-- [x] **UI CRUD `/teachers` y `/courses`** — completa el catálogo de mantenimiento del tenant; cierra el agujero de "no se puede operar sin curl"
-- [x] **Testing infra (e2e)** — Jest + Supertest + BD `acedesoft_test`, primer suite cubre auth completo
-- [x] **Módulo `students`** — CRUD con tenant scoping + suite e2e (incl. test de aislamiento entre tenants)
-- [x] **Módulo `teachers`** — mismo patrón, CRUD + e2e
-- [x] **Módulo `courses`** — CRUD + e2e (incl. 409 al borrar con groups dependientes)
-- [x] **Módulo `groups`** — CRUD + cross-tenant FK validation (course/teacher) + cascade a enrollments/sessions
-- [x] **Módulo `enrollments`** — student↔group con filtros, 409 en duplicados, cross-tenant FK
-- [x] **Módulo `sessions`** — clases planificadas, filtros (groupId, status, rango de fechas), cross-tenant FK
-- [x] **Módulo `attendance`** — anidado bajo `/sessions/:id/attendance`, bulk upsert atómico, validación cross-tenant
-- [ ] Módulo de negocio restante (payments)
+Producto demoable y onboardeable. Resumen no técnico en
+[docs/funcionalidades.md](docs/funcionalidades.md). Bloques implementados:
+
+- **Catálogo y operación**: alumnos (+ ficha + CSV), profesores (+ ficha),
+  cursos, grupos, inscripciones, sesiones, asistencia.
+- **Calendario**: vista semanal/mensual + export iCal.
+- **Cobro (núcleo)**: facturas, PDF, pagos parciales/totales, mensualidades
+  recurrentes, descuentos familia/hermanos.
+- **Banca**: remesa de domiciliación SEPA (`pain.008`).
+- **Cumplimiento Veri\*Factu**: cadena de hash anti-manipulación, QR AEAT en el
+  PDF, facturas rectificativas, inmutabilidad.
+- **Plataforma**: multi-tenant, alta autoservicio (`/auth/signup`), rate
+  limiting, dashboard, toasts y estados vacíos.
+
+Suite e2e (Jest + Supertest) en verde como puerta de calidad de cada merge.
+
+### Hoja de ruta (pendiente)
+
+- Mensajería por email a alumnos/grupos (proveedor por decidir).
+- Portal de familias (login de tutor/alumno).
+- Envío en tiempo real a la AEAT de Veri\*Factu (requiere certificado de una
+  academia real en producción).
 
 ## Modelo de datos (resumen)
 
@@ -238,3 +246,27 @@ Implementado en [apps/api/src/attendance](apps/api/src/attendance). Anidado bajo
 | DELETE | `/sessions/:sessionId/attendance/:studentId` | Borra una marca. 204. |
 
 `AttendanceStatus`: `PRESENT`, `ABSENT`, `LATE`, `EXCUSED`.
+
+## Invoices, Billing y Settings — resumen
+
+Además de los módulos de catálogo, la API cubre el ciclo de cobro y el
+cumplimiento. Detalle en el código; resumen:
+
+- **`/invoices`** ([apps/api/src/invoices](apps/api/src/invoices)) — CRUD de
+  facturas con numeración correlativa por tenant, pagos anidados
+  (`/invoices/:id/payments`), PDF (`/invoices/:id/pdf`), cadena de hash
+  Veri\*Factu + QR AEAT, e inmutabilidad. Rectificativas en
+  `/invoices/:id/rectifications`.
+- **`/billing`** ([apps/api/src/billing](apps/api/src/billing)) —
+  `POST /billing/generate-month` (mensualidades recurrentes, idempotente, con
+  descuentos de familia) y remesa SEPA (`/billing/sepa-remittance` +
+  `/preview`).
+- **`/settings`** ([apps/api/src/settings](apps/api/src/settings)) — datos
+  fiscales, contacto, configuración SEPA y prefijo de factura del tenant.
+
+## Auth — extras
+
+- **`POST /auth/signup`** (público): alta autoservicio de academia (crea tenant
+  + admin). Con rate limiting (3/h por IP); `/auth/login` limitado a 5/min.
+- El descuento familia/hermanos vive en `Student.discountPercent` y se aplica en
+  la generación de mensualidades.
