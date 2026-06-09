@@ -2,11 +2,12 @@
 
 ## Git flow
 
-- `main` → estable
-- `develop` → integración
-- `feature/*` → nuevas funcionalidades
+PRs pequeños y directos a `main` (desde 2026-05-20; nada en producción aún).
+
+- `main` → rama estable
+- `feature/*` → nuevas funcionalidades (parten de `main`, vuelven a `main`)
 - `fix/*` → correcciones
-- `hotfix/*` → correcciones urgentes
+- `chore/*` → mantenimiento (deps, tooling, higiene)
 
 Cada PR debe ser pequeño, revisable y dejar el repo ejecutable.
 
