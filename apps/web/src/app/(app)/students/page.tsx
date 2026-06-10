@@ -2,11 +2,12 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, Download } from 'lucide-react';
+import { Users, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { EmptyState } from '@/components/empty-state';
+import { StudentImportPanel } from '@/components/students-import';
 import { downloadCsv } from '@/lib/csv';
 
 type Student = {
@@ -41,6 +42,7 @@ export default function StudentsPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -176,6 +178,19 @@ export default function StudentsPage() {
       <header className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Alumnos</h1>
         <div className="flex items-center gap-2">
+          {!showImport && (
+            <button
+              onClick={() => {
+                setShowImport(true);
+                setShowForm(false);
+              }}
+              className="btn-secondary"
+              title="Importar alumnos desde un archivo CSV"
+            >
+              <Upload className="h-4 w-4" />
+              Importar CSV
+            </button>
+          )}
           <button
             onClick={handleExport}
             disabled={students.length === 0}
@@ -192,6 +207,13 @@ export default function StudentsPage() {
           )}
         </div>
       </header>
+
+      {showImport && (
+        <StudentImportPanel
+          onClose={() => setShowImport(false)}
+          onImported={refresh}
+        />
+      )}
 
       {showForm && (
         <form
