@@ -13,6 +13,7 @@ import {
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
+import { ImportStudentsDto } from './dto/import-students.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -24,6 +25,14 @@ export class StudentsController {
   @Post()
   create(@CurrentUser('tenantId') tenantId: string, @Body() dto: CreateStudentDto) {
     return this.studentsService.create(tenantId, dto);
+  }
+
+  @Post('import')
+  import(
+    @CurrentUser('tenantId') tenantId: string,
+    @Body() dto: ImportStudentsDto,
+  ) {
+    return this.studentsService.importMany(tenantId, dto.students);
   }
 
   @Get()

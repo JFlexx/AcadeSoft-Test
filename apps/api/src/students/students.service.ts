@@ -26,6 +26,27 @@ export class StudentsService {
     });
   }
 
+  /**
+   * Bulk import. Rows are created independently so one bad row doesn't block
+   * the rest; failures are reported per row (1-based) for the UI to surface.
+   */
+  async importMany(tenantId: string, rows: CreateStudentDto[]) {
+    const errors: { row: number; message: string }[] = [];
+    let created = 0;
+    for (let i = 0; i < rows.length; i++) {
+      try {
+        await this.create(tenantId, rows[i]);
+        created++;
+      } catch (err) {
+        errors.push({
+          row: i + 1,
+          message: err instanceof Error ? err.message : 'Error desconocido',
+        });
+      }
+    }
+    return { total: rows.length, created, failed: errors.length, errors };
+  }
+
   async findOne(tenantId: string, id: string) {
     const student = await this.prisma.student.findFirst({
       where: { id, tenantId },
