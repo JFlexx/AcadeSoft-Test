@@ -134,9 +134,10 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  role      Role       @relation(fields: [roleId], references: [id])
-  auditLogs AuditLog[]
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role          Role       @relation(fields: [roleId], references: [id])
+  auditLogs     AuditLog[]
+  guardianLinks Guardian[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -179,6 +180,7 @@ model Student {
 model Guardian {
   id           String   @id @default(cuid())
   studentId    String
+  userId       String?
   firstName    String
   lastName     String
   relationship String
@@ -189,8 +191,10 @@ model Guardian {
   updatedAt    DateTime @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([studentId])
+  @@index([userId])
   @@map("guardians")
 }
 

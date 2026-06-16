@@ -14,6 +14,7 @@ import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { ImportStudentsDto } from './dto/import-students.dto';
+import { GrantPortalAccessDto } from './dto/grant-portal-access.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -36,6 +37,15 @@ export class StudentsController {
     @Body() dto: ImportStudentsDto,
   ) {
     return this.studentsService.importMany(tenantId, dto.students);
+  }
+
+  @Post(':id/portal-access')
+  grantPortalAccess(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+    @Body() dto: GrantPortalAccessDto,
+  ) {
+    return this.studentsService.grantPortalAccess(tenantId, id, dto);
   }
 
   @Get()

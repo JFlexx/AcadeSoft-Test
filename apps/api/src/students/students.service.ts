@@ -1,7 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
+import { GrantPortalAccessDto } from './dto/grant-portal-access.dto';
 
 @Injectable()
 export class StudentsService {
@@ -71,5 +77,77 @@ export class StudentsService {
   async remove(tenantId: string, id: string): Promise<void> {
     await this.findOne(tenantId, id);
     await this.prisma.student.delete({ where: { id } });
+  }
+
+  /**
+   * Grants a family member read-only portal access to a student. Creates a
+   * `guardian` user (or reuses an existing guardian login with the same email,
+   * so one parent can cover several children) and links it to the student.
+   */
+  async grantPortalAccess(
+    tenantId: string,
+    studentId: string,
+    dto: GrantPortalAccessDto,
+  ) {
+    await this.findOne(tenantId, studentId);
+
+    const role = await this.prisma.role.upsert({
+      where: { name: 'guardian' },
+      update: {},
+      create: {
+        name: 'guardian',
+        description: 'Family/guardian portal',
+        isSystem: true,
+      },
+    });
+
+    const email = dto.email.trim().toLowerCase();
+    const existing = await this.prisma.user.findUnique({
+      where: { tenantId_email: { tenantId, email } },
+      include: { role: true },
+    });
+
+    let userId: string;
+    if (existing) {
+      if (existing.role.name !== 'guardian') {
+        throw new ConflictException(
+          'Ese email ya pertenece a un usuario que no es del portal de familias',
+        );
+      }
+      userId = existing.id;
+      const alreadyLinked = await this.prisma.guardian.findFirst({
+        where: { studentId, userId },
+      });
+      if (alreadyLinked) {
+        throw new ConflictException(
+          'Esta familia ya tiene acceso a este alumno',
+        );
+      }
+    } else {
+      const user = await this.prisma.user.create({
+        data: {
+          tenantId,
+          roleId: role.id,
+          email,
+          passwordHash: await argon2.hash(dto.password),
+          firstName: dto.firstName.trim(),
+          lastName: dto.lastName.trim(),
+        },
+      });
+      userId = user.id;
+    }
+
+    const guardian = await this.prisma.guardian.create({
+      data: {
+        studentId,
+        userId,
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        relationship: dto.relationship?.trim() || 'Tutor',
+        email,
+      },
+    });
+
+    return { id: guardian.id, userId, email, studentId };
   }
 }
