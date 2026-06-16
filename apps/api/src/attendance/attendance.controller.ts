@@ -14,9 +14,12 @@ import { AttendanceService } from './attendance.service';
 import { BulkUpsertAttendanceDto } from './dto/bulk-upsert-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 @Controller('sessions/:sessionId/attendance')
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
