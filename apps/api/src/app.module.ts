@@ -16,6 +16,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { BillingModule } from './billing/billing.module';
 import { SettingsModule } from './settings/settings.module';
+import { PortalModule } from './portal/portal.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { SettingsModule } from './settings/settings.module';
     InvoicesModule,
     BillingModule,
     SettingsModule,
+    PortalModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

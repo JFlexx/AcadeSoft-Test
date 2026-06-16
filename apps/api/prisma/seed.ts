@@ -15,6 +15,7 @@ async function main() {
         { name: 'admin', description: 'Tenant administrator' },
         { name: 'teacher', description: 'Teacher' },
         { name: 'student', description: 'Student' },
+        { name: 'guardian', description: 'Family/guardian portal' },
       ] as const
     ).map((r) =>
       prisma.role.upsert({
