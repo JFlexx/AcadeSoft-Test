@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { Users2, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
+import { confirmToast } from '@/lib/confirm';
 import { EmptyState } from '@/components/empty-state';
 
 type Student = {
@@ -430,6 +431,13 @@ function SummaryCard({
   );
 }
 
+type PortalAccess = {
+  id: string;
+  name: string;
+  relationship: string;
+  email: string | null;
+};
+
 function InviteFamily({ studentId }: { studentId: string }) {
   const EMPTY = {
     firstName: '',
@@ -438,10 +446,26 @@ function InviteFamily({ studentId }: { studentId: string }) {
     password: '',
     relationship: '',
   };
+  const [accesses, setAccesses] = useState<PortalAccess[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function refresh() {
+    try {
+      setAccesses(
+        await api<PortalAccess[]>(`/students/${studentId}/portal-access`),
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -463,6 +487,7 @@ function InviteFamily({ studentId }: { studentId: string }) {
       toast.success('Acceso de familia creado');
       setOpen(false);
       setForm(EMPTY);
+      await refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error de red');
     } finally {
@@ -470,15 +495,60 @@ function InviteFamily({ studentId }: { studentId: string }) {
     }
   }
 
+  async function revoke(a: PortalAccess) {
+    const ok = await confirmToast(`¿Revocar el acceso de ${a.name}?`, {
+      description: a.email ?? undefined,
+      confirmLabel: 'Revocar',
+    });
+    if (!ok) return;
+    try {
+      await api(`/students/${studentId}/portal-access/${a.id}`, {
+        method: 'DELETE',
+      });
+      toast.success('Acceso revocado');
+      await refresh();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Error de red');
+    }
+  }
+
   return (
     <Card title="Acceso de la familia" className="mb-8">
       <p className="text-sm text-gray-500 mb-3">
-        Crea un acceso para que la familia consulte las facturas y la asistencia
-        de este alumno desde el portal de familias.
+        Da acceso para que la familia consulte las facturas y la asistencia de
+        este alumno desde el portal de familias.
       </p>
+
+      {accesses.length > 0 && (
+        <ul className="divide-y border rounded-lg mb-3">
+          {accesses.map((a) => (
+            <li
+              key={a.id}
+              className="flex items-center justify-between px-3 py-2 text-sm"
+            >
+              <span className="min-w-0">
+                <span className="block truncate">
+                  {a.name}{' '}
+                  <span className="text-gray-400">· {a.relationship}</span>
+                </span>
+                {a.email && (
+                  <span className="text-xs text-gray-500">{a.email}</span>
+                )}
+              </span>
+              <button
+                onClick={() => revoke(a)}
+                className="text-sm text-red-600 hover:underline shrink-0 ml-3"
+              >
+                Revocar
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {!open ? (
         <button onClick={() => setOpen(true)} className="btn-secondary">
-          Invitar a la familia
+          {accesses.length > 0 ? 'Añadir otro acceso' : 'Invitar a la familia'}
         </button>
       ) : (
         <form onSubmit={submit} className="space-y-3">
