@@ -150,4 +150,51 @@ export class StudentsService {
 
     return { id: guardian.id, userId, email, studentId };
   }
+
+  /** Family logins that can see this student in the portal. */
+  async listPortalAccess(tenantId: string, studentId: string) {
+    await this.findOne(tenantId, studentId);
+    const guardians = await this.prisma.guardian.findMany({
+      where: { studentId, userId: { not: null } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        relationship: true,
+        user: { select: { email: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return guardians.map((g) => ({
+      id: g.id,
+      name: `${g.firstName} ${g.lastName}`,
+      relationship: g.relationship,
+      email: g.user?.email ?? null,
+    }));
+  }
+
+  /**
+   * Revokes a family's access to this student. Removes the link; if the login
+   * has no remaining children it is deleted too (orphaned account cleanup).
+   */
+  async revokePortalAccess(
+    tenantId: string,
+    studentId: string,
+    guardianId: string,
+  ): Promise<void> {
+    await this.findOne(tenantId, studentId);
+    const guardian = await this.prisma.guardian.findFirst({
+      where: { id: guardianId, studentId },
+    });
+    if (!guardian) throw new NotFoundException();
+
+    const userId = guardian.userId;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.guardian.delete({ where: { id: guardian.id } });
+      if (userId) {
+        const remaining = await tx.guardian.count({ where: { userId } });
+        if (remaining === 0) await tx.user.delete({ where: { id: userId } });
+      }
+    });
+  }
 }
