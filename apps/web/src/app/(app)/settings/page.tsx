@@ -1,6 +1,8 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { Copy } from 'lucide-react';
+import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 
 type Settings = {
@@ -61,12 +63,14 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [slug, setSlug] = useState('');
 
   async function refresh() {
     setLoading(true);
     try {
       const data = await api<Settings>('/settings');
       setForm(toForm(data));
+      setSlug(data.slug);
     } finally {
       setLoading(false);
     }
@@ -125,6 +129,36 @@ export default function SettingsPage() {
           SEPA.
         </p>
       </header>
+
+      {slug && (
+        <div className="border rounded-lg p-4 bg-brand-50/50 mb-6">
+          <p className="text-sm font-medium text-gray-800">
+            Enlace de inscripción online
+          </p>
+          <p className="text-xs text-gray-500 mt-1 mb-2">
+            Compártelo para que las familias se inscriban solas. Las solicitudes
+            llegan como inscripciones pendientes de revisar.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs bg-white border rounded px-2 py-1.5 truncate">
+              {`${typeof window !== 'undefined' ? window.location.origin : ''}/enroll/${slug}`}
+            </code>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `${window.location.origin}/enroll/${slug}`,
+                );
+                toast.success('Enlace copiado');
+              }}
+              className="btn-secondary shrink-0"
+            >
+              <Copy className="h-4 w-4" />
+              Copiar
+            </button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <section className="border rounded-lg p-4 bg-white space-y-3">
