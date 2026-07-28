@@ -34,8 +34,8 @@ export type SignupInput = {
 type AuthContextValue = {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (input: LoginInput) => Promise<void>;
-  signup: (input: SignupInput) => Promise<void>;
+  login: (input: LoginInput) => Promise<AuthUser>;
+  signup: (input: SignupInput) => Promise<AuthUser>;
   logout: () => Promise<void>;
 };
 
@@ -75,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(accessToken);
     const me = await api<AuthUser>('/users/me');
     setUser(me);
+    return me;
   }, []);
 
   const signup = useCallback(async (input: SignupInput) => {
@@ -86,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(accessToken);
     const me = await api<AuthUser>('/users/me');
     setUser(me);
+    return me;
   }, []);
 
   const logout = useCallback(async () => {
