@@ -145,4 +145,62 @@ describe('Family portal (e2e)', () => {
   it('requires authentication on the portal', async () => {
     await http().get('/portal/students').expect(401);
   });
+
+  it('lists and revokes portal access', async () => {
+    const ana = await createStudent('Ana', 'García');
+    const g = await grant(ana, 'madre@example.com').expect(201);
+
+    const list = await http()
+      .get(`/students/${ana}/portal-access`)
+      .set(bearer(adminToken))
+      .expect(200);
+    expect(list.body).toHaveLength(1);
+    expect(list.body[0].email).toBe('madre@example.com');
+
+    // guardian works before revoke
+    const token = await login('madre@example.com', 'FamilyPass123!');
+    await http().get('/portal/students').set(bearer(token)).expect(200);
+
+    await http()
+      .delete(`/students/${ana}/portal-access/${g.body.id}`)
+      .set(bearer(adminToken))
+      .expect(204);
+
+    const after = await http()
+      .get(`/students/${ana}/portal-access`)
+      .set(bearer(adminToken))
+      .expect(200);
+    expect(after.body).toHaveLength(0);
+
+    // was their only child → login removed
+    await http()
+      .post('/auth/login')
+      .send({ tenantSlug: 'acme', email: 'madre@example.com', password: 'FamilyPass123!' })
+      .expect(401);
+  });
+
+  it('revoking one child keeps access to the siblings', async () => {
+    const lucia = await createStudent('Lucía', 'Fernández');
+    const pablo = await createStudent('Pablo', 'Fernández');
+    const g1 = await grant(lucia, 'familia@example.com').expect(201);
+    await grant(pablo, 'familia@example.com').expect(201);
+
+    await http()
+      .delete(`/students/${lucia}/portal-access/${g1.body.id}`)
+      .set(bearer(adminToken))
+      .expect(204);
+
+    const token = await login('familia@example.com', 'FamilyPass123!');
+    const res = await http().get('/portal/students').set(bearer(token)).expect(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].firstName).toBe('Pablo');
+  });
+
+  it('revoke validates ownership (404 for an unknown link)', async () => {
+    const ana = await createStudent('Ana', 'García');
+    await http()
+      .delete(`/students/${ana}/portal-access/nope`)
+      .set(bearer(adminToken))
+      .expect(404);
+  });
 });

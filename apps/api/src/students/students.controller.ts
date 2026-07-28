@@ -39,6 +39,14 @@ export class StudentsController {
     return this.studentsService.importMany(tenantId, dto.students);
   }
 
+  @Get(':id/portal-access')
+  listPortalAccess(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+  ) {
+    return this.studentsService.listPortalAccess(tenantId, id);
+  }
+
   @Post(':id/portal-access')
   grantPortalAccess(
     @CurrentUser('tenantId') tenantId: string,
@@ -46,6 +54,16 @@ export class StudentsController {
     @Body() dto: GrantPortalAccessDto,
   ) {
     return this.studentsService.grantPortalAccess(tenantId, id, dto);
+  }
+
+  @Delete(':id/portal-access/:guardianId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  revokePortalAccess(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+    @Param('guardianId') guardianId: string,
+  ) {
+    return this.studentsService.revokePortalAccess(tenantId, id, guardianId);
   }
 
   @Get()
