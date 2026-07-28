@@ -17,6 +17,7 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { BillingModule } from './billing/billing.module';
 import { SettingsModule } from './settings/settings.module';
 import { PortalModule } from './portal/portal.module';
+import { PublicModule } from './public/public.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { PortalModule } from './portal/portal.module';
     BillingModule,
     SettingsModule,
     PortalModule,
+    PublicModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
