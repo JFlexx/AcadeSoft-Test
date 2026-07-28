@@ -16,7 +16,8 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && user) router.replace('/');
+    if (!isLoading && user)
+      router.replace(user.role === 'guardian' ? '/portal' : '/');
   }, [isLoading, user, router]);
 
   async function handleSubmit(e: FormEvent) {
@@ -24,8 +25,8 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login({ tenantSlug, email, password });
-      router.replace('/');
+      const u = await login({ tenantSlug, email, password });
+      router.replace(u.role === 'guardian' ? '/portal' : '/');
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError('Credenciales inválidas');

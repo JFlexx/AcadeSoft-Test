@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Users2, Receipt } from 'lucide-react';
+import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { EmptyState } from '@/components/empty-state';
 
@@ -226,6 +227,8 @@ export default function StudentDetailPage() {
         </Card>
       </div>
 
+      <InviteFamily studentId={student.id} />
+
       {student.notes && (
         <Card title="Notas" className="mb-8">
           <p className="text-sm text-gray-700 whitespace-pre-wrap">{student.notes}</p>
@@ -424,5 +427,143 @@ function SummaryCard({
       <p className="text-xs text-gray-500 mb-1">{label}</p>
       <p className={`text-xl font-semibold ${toneClass}`}>{value}</p>
     </div>
+  );
+}
+
+function InviteFamily({ studentId }: { studentId: string }) {
+  const EMPTY = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    relationship: '',
+  };
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      const payload: Record<string, string> = {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      };
+      if (form.relationship.trim())
+        payload.relationship = form.relationship.trim();
+      await api(`/students/${studentId}/portal-access`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      toast.success('Acceso de familia creado');
+      setOpen(false);
+      setForm(EMPTY);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Error de red');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card title="Acceso de la familia" className="mb-8">
+      <p className="text-sm text-gray-500 mb-3">
+        Crea un acceso para que la familia consulte las facturas y la asistencia
+        de este alumno desde el portal de familias.
+      </p>
+      {!open ? (
+        <button onClick={() => setOpen(true)} className="btn-secondary">
+          Invitar a la familia
+        </button>
+      ) : (
+        <form onSubmit={submit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Nombre"
+              value={form.firstName}
+              onChange={(v) => setForm({ ...form, firstName: v })}
+              required
+            />
+            <Field
+              label="Apellidos"
+              value={form.lastName}
+              onChange={(v) => setForm({ ...form, lastName: v })}
+              required
+            />
+            <Field
+              label="Email"
+              type="email"
+              value={form.email}
+              onChange={(v) => setForm({ ...form, email: v })}
+              required
+            />
+            <Field
+              label="Contraseña"
+              type="password"
+              value={form.password}
+              onChange={(v) => setForm({ ...form, password: v })}
+              required
+            />
+            <Field
+              label="Parentesco (opcional)"
+              value={form.relationship}
+              onChange={(v) => setForm({ ...form, relationship: v })}
+              placeholder="Madre, Padre, Tutor…"
+            />
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button type="submit" disabled={submitting} className="btn-primary">
+              {submitting ? 'Creando…' : 'Crear acceso'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setError(null);
+              }}
+              className="btn-secondary"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+    </Card>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  required = false,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs text-gray-600 block mb-1">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        placeholder={placeholder}
+        className="w-full border rounded px-2 py-1 text-sm"
+      />
+    </label>
   );
 }

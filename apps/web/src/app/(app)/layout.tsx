@@ -39,10 +39,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) router.replace('/login');
+    if (isLoading) return;
+    if (!user) router.replace('/login');
+    else if (user.role === 'guardian') router.replace('/portal');
   }, [isLoading, user, router]);
 
-  if (isLoading || !user) {
+  if (isLoading || !user || user.role === 'guardian') {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <p className="text-sm text-gray-500">Cargando…</p>
