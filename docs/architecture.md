@@ -84,4 +84,3 @@ firma de Stripe). `/users/me` queda abierto a cualquier autenticado.
 - Generación automática mensual de mensualidades (hoy manual con un clic).
 - Envío en tiempo real a la AEAT de los registros Veri\*Factu (requiere
   certificado de una academia real en producción).
-- Bump de CI a Node 24 (hoy en Node 20).
