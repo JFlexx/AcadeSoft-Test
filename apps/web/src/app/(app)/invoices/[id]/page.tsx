@@ -132,6 +132,7 @@ export default function InvoiceDetailPage() {
 
   const [cancelling, setCancelling] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -232,6 +233,20 @@ export default function InvoiceDetailPage() {
       );
     } finally {
       setDownloadingPdf(false);
+    }
+  }
+
+  async function handlePayOnline() {
+    setPaying(true);
+    try {
+      const { url } = await api<{ url: string }>(
+        `/invoices/${invoiceId}/checkout`,
+        { method: 'POST' },
+      );
+      window.location.href = url;
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Error al iniciar el pago');
+      setPaying(false);
     }
   }
 
@@ -364,6 +379,15 @@ export default function InvoiceDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
+          {canRegisterPayment && (
+            <button
+              onClick={handlePayOnline}
+              disabled={paying}
+              className="btn-primary"
+            >
+              {paying ? 'Redirigiendo…' : 'Pagar con tarjeta'}
+            </button>
+          )}
           <button
             onClick={handleDownloadPdf}
             disabled={downloadingPdf}
