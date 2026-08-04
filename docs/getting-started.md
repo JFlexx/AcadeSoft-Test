@@ -62,6 +62,28 @@ y futuras, asistencia, las facturas del mes y algunos pagos. Así la app se ve
 > de cero, vaciar la base de datos de desarrollo y repetir los pasos 4 y la
 > demo.
 
+### Portal de familias (demo)
+
+Desde la ficha de un alumno (admin) → **"Invitar a la familia"** se crea un
+acceso. El login del portal es el mismo (`/login`) y redirige a `/portal`.
+
+### Inscripción online (demo)
+
+En **Ajustes** hay un **enlace de inscripción** (`/enroll/<slug>`) que se puede
+abrir sin login para que una familia se inscriba sola.
+
+### Pagos con tarjeta (Stripe, opcional)
+
+Para probar el cobro con tarjeta, en `apps/api/.env`:
+
+```
+STRIPE_SECRET_KEY="sk_test_..."      # Secret key (NO la pk_)
+STRIPE_WEBHOOK_SECRET="whsec_..."    # de `stripe listen --forward-to localhost:3001/stripe/webhook`
+```
+
+Tarjeta de test: `4242 4242 4242 4242`. Sin claves, el resto de la app funciona
+igual; solo el botón "Pagar con tarjeta" queda inactivo.
+
 ## Tests
 
 Suite e2e con Jest + Supertest contra una base separada `acedesoft_test`.

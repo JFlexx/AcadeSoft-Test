@@ -116,18 +116,26 @@ Producto demoable y onboardeable. Resumen no técnico en
 - **Calendario**: vista semanal/mensual + export iCal.
 - **Cobro (núcleo)**: facturas, PDF, pagos parciales/totales, mensualidades
   recurrentes, descuentos familia/hermanos.
+- **Cobro online**: pago con tarjeta vía **Stripe Checkout** (factura + portal)
+  con webhook firmado; detección **automática de vencidas** (cron diario).
 - **Banca**: remesa de domiciliación SEPA (`pain.008`).
 - **Cumplimiento Veri\*Factu**: cadena de hash anti-manipulación, QR AEAT en el
   PDF, facturas rectificativas, inmutabilidad.
+- **Portal de familias**: acceso de solo lectura (grupos/facturas/asistencia) +
+  pago con tarjeta; el admin da/quita acceso por alumno. RBAC por roles.
+- **Inscripción online**: página pública self-service (`/enroll/:slug`) →
+  inscripción PENDING a aprobar.
+- **Datos**: import de alumnos por CSV; export CSV (alumnos/facturas) e iCal.
 - **Plataforma**: multi-tenant, alta autoservicio (`/auth/signup`), rate
-  limiting, dashboard, toasts y estados vacíos.
+  limiting, dashboard accionable, toasts y estados vacíos.
 
 Suite e2e (Jest + Supertest) en verde como puerta de calidad de cada merge.
 
 ### Hoja de ruta (pendiente)
 
-- Mensajería por email a alumnos/grupos (proveedor por decidir).
-- Portal de familias (login de tutor/alumno).
+- Mensajería por email (+ recordatorios automáticos de impago) — proveedor por
+  decidir (Resend).
+- Generación automática mensual de las mensualidades (hoy con un clic).
 - Envío en tiempo real a la AEAT de Veri\*Factu (requiere certificado de una
   academia real en producción).
 
