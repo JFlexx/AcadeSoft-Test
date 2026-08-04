@@ -1,8 +1,12 @@
 import {
+  IsBoolean,
   IsEmail,
+  IsInt,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class UpdateSettingsDto {
@@ -50,4 +54,14 @@ export class UpdateSettingsDto {
   @IsString()
   @MaxLength(20)
   invoicePrefix?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  autoBillingEnabled?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(28)
+  autoBillingDay?: number;
 }
