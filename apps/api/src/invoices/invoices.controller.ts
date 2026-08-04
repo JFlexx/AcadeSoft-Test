@@ -24,12 +24,16 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ListInvoicesDto } from './dto/list-invoices.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { InvoicesService } from './invoices.service';
+import { StripeService } from '../stripe/stripe.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 @Controller('invoices')
 export class InvoicesController {
-  constructor(private readonly invoicesService: InvoicesService) {}
+  constructor(
+    private readonly invoicesService: InvoicesService,
+    private readonly stripeService: StripeService,
+  ) {}
 
   @Post()
   create(@CurrentUser('tenantId') tenantId: string, @Body() dto: CreateInvoiceDto) {
@@ -90,6 +94,14 @@ export class InvoicesController {
     );
     res.setHeader('Content-Length', buffer.length.toString());
     res.end(buffer);
+  }
+
+  @Post(':id/checkout')
+  checkout(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+  ) {
+    return this.stripeService.createInvoiceCheckout(tenantId, id);
   }
 
   @Post(':id/payments')

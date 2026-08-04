@@ -13,7 +13,7 @@ export async function bootstrapTestApp(): Promise<{
     imports: [AppModule],
   }).compile();
 
-  const app = moduleRef.createNestApplication();
+  const app = moduleRef.createNestApplication({ rawBody: true });
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),

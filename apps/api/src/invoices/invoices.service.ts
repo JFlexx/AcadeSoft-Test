@@ -338,7 +338,7 @@ export class InvoicesService {
   }
 }
 
-function computeStatus(
+export function computeStatus(
   amount: Prisma.Decimal,
   paidAmount: Prisma.Decimal,
 ): InvoiceStatus {
