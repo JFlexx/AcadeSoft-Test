@@ -18,6 +18,7 @@ import { BillingModule } from './billing/billing.module';
 import { SettingsModule } from './settings/settings.module';
 import { PortalModule } from './portal/portal.module';
 import { PublicModule } from './public/public.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { PublicModule } from './public/public.module';
     SettingsModule,
     PortalModule,
     PublicModule,
+    StripeModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
