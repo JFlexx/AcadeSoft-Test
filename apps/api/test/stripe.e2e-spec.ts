@@ -157,4 +157,42 @@ describe('Stripe card payments (e2e)', () => {
     await http().post('/invoices/nope/checkout').set(bearer(token)).expect(404);
     await http().post('/invoices/nope/checkout').expect(401);
   });
+
+  it('lets a guardian pay their child invoice from the portal, but not others', async () => {
+    const inv = await createInvoice(50);
+    await http()
+      .post(`/students/${studentId}/portal-access`)
+      .set(bearer(token))
+      .send({ firstName: 'Madre', lastName: 'X', email: 'm@e.com', password: 'FamilyPass123!' })
+      .expect(201);
+    const gt = (
+      await http()
+        .post('/auth/login')
+        .send({ tenantSlug: 'acme', email: 'm@e.com', password: 'FamilyPass123!' })
+        .expect(200)
+    ).body.accessToken;
+
+    mockSessionsCreate.mockResolvedValue({ url: 'https://stripe.test/portal' });
+    const res = await http()
+      .post(`/portal/invoices/${inv.id}/checkout`)
+      .set(bearer(gt))
+      .expect(201);
+    expect(res.body.url).toBe('https://stripe.test/portal');
+
+    // an invoice of a student they are NOT linked to → 404
+    const other = await http()
+      .post('/students')
+      .set(bearer(token))
+      .send({ firstName: 'Otro', lastName: 'Niño' })
+      .expect(201);
+    const otherInv = await http()
+      .post('/invoices')
+      .set(bearer(token))
+      .send({ studentId: other.body.id, amount: 20 })
+      .expect(201);
+    await http()
+      .post(`/portal/invoices/${otherInv.body.id}/checkout`)
+      .set(bearer(gt))
+      .expect(404);
+  });
 });
