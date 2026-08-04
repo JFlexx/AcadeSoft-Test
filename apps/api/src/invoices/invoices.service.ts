@@ -207,7 +207,7 @@ export class InvoicesService {
         where: { id: invoiceId },
         data: {
           paidAmount: newPaidAmount,
-          status: computeStatus(invoice.amount, newPaidAmount),
+          status: computeStatus(invoice.amount, newPaidAmount, invoice.dueDate),
         },
       });
 
@@ -320,10 +320,29 @@ export class InvoicesService {
         where: { id: payment.invoiceId },
         data: {
           paidAmount: newPaidAmount,
-          status: computeStatus(payment.invoice.amount, newPaidAmount),
+          status: computeStatus(
+            payment.invoice.amount,
+            newPaidAmount,
+            payment.invoice.dueDate,
+          ),
         },
       }),
     ]);
+  }
+
+  /**
+   * Flips still-owed invoices past their due date to OVERDUE. Idempotent
+   * (already-overdue/paid invoices are excluded). Run daily by a cron.
+   */
+  async markOverdueInvoices(): Promise<number> {
+    const res = await this.prisma.invoice.updateMany({
+      where: {
+        status: { in: ['PENDING', 'PARTIAL'] },
+        dueDate: { lt: new Date() },
+      },
+      data: { status: 'OVERDUE' },
+    });
+    return res.count;
   }
 
   private async ensureStudentInTenant(
@@ -341,8 +360,10 @@ export class InvoicesService {
 export function computeStatus(
   amount: Prisma.Decimal,
   paidAmount: Prisma.Decimal,
+  dueDate?: Date | null,
 ): InvoiceStatus {
   if (paidAmount.gte(amount)) return 'PAID';
+  if (dueDate && dueDate.getTime() < Date.now()) return 'OVERDUE';
   if (paidAmount.gt(0)) return 'PARTIAL';
   return 'PENDING';
 }
