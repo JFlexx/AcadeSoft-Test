@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 
 type InvoiceStatus =
   | 'DRAFT'
@@ -113,6 +114,22 @@ export default function PortalPage() {
 }
 
 function StudentCard({ student }: { student: PortalStudent }) {
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  async function pay(invoiceId: string) {
+    setPayingId(invoiceId);
+    try {
+      const { url } = await api<{ url: string }>(
+        `/portal/invoices/${invoiceId}/checkout`,
+        { method: 'POST' },
+      );
+      window.location.href = url;
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Error al iniciar el pago');
+      setPayingId(null);
+    }
+  }
+
   const pending = student.invoices
     .filter((i) => i.status !== 'CANCELLED')
     .reduce((sum, i) => sum + (Number(i.amount) - Number(i.paidAmount)), 0);
@@ -169,6 +186,15 @@ function StudentCard({ student }: { student: PortalStudent }) {
                     >
                       {INVOICE_STATUS_LABEL[i.status]}
                     </span>
+                    {['PENDING', 'PARTIAL', 'OVERDUE'].includes(i.status) && (
+                      <button
+                        onClick={() => pay(i.id)}
+                        disabled={payingId === i.id}
+                        className="text-xs font-medium text-brand-700 hover:underline disabled:opacity-50"
+                      >
+                        {payingId === i.id ? '…' : 'Pagar'}
+                      </button>
+                    )}
                   </span>
                 </li>
               ))}
