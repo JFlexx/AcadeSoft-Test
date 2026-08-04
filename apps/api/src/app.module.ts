@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { HealthController } from './health.controller';
 import { PrismaModule } from './prisma/prisma.module';
@@ -23,6 +24,7 @@ import { StripeModule } from './stripe/stripe.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     // Global rate limiting (defense-in-depth). A generous default covers every
     // route; auth endpoints tighten this via @Throttle. Disable entirely with
     // THROTTLE_DISABLED=true (used by the e2e suites that hammer /auth/login).

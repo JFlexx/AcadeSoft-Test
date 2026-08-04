@@ -149,7 +149,10 @@ export class StripeService {
       });
       await tx.invoice.update({
         where: { id: invoiceId },
-        data: { paidAmount: newPaid, status: computeStatus(invoice.amount, newPaid) },
+        data: {
+          paidAmount: newPaid,
+          status: computeStatus(invoice.amount, newPaid, invoice.dueDate),
+        },
       });
     });
   }
