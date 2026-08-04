@@ -1,9 +1,36 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { StripeService } from '../stripe/stripe.service';
 
 @Injectable()
 export class PortalService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stripeService: StripeService,
+  ) {}
+
+  private async studentIdsFor(userId: string): Promise<string[]> {
+    const links = await this.prisma.guardian.findMany({
+      where: { userId },
+      select: { studentId: true },
+    });
+    return links.map((l) => l.studentId);
+  }
+
+  /** Card-pay one of the guardian's children's invoices via Stripe Checkout. */
+  async createInvoiceCheckout(
+    userId: string,
+    tenantId: string,
+    invoiceId: string,
+  ) {
+    const studentIds = await this.studentIdsFor(userId);
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id: invoiceId, tenantId, studentId: { in: studentIds } },
+      select: { id: true },
+    });
+    if (!invoice) throw new NotFoundException();
+    return this.stripeService.createInvoiceCheckout(tenantId, invoiceId);
+  }
 
   /**
    * The students a guardian user can see in the read-only family portal,

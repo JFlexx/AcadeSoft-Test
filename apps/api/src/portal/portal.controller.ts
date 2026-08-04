@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { PortalService } from './portal.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -18,5 +18,14 @@ export class PortalController {
     @CurrentUser('tenantId') tenantId: string,
   ) {
     return this.portalService.myStudents(userId, tenantId);
+  }
+
+  @Post('invoices/:id/checkout')
+  checkout(
+    @CurrentUser('userId') userId: string,
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+  ) {
+    return this.portalService.createInvoiceCheckout(userId, tenantId, id);
   }
 }
