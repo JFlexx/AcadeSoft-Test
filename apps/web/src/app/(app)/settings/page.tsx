@@ -17,6 +17,8 @@ type Settings = {
   iban: string | null;
   sepaCreditorId: string | null;
   invoicePrefix: string;
+  autoBillingEnabled: boolean;
+  autoBillingDay: number;
 };
 
 type FormState = {
@@ -64,6 +66,13 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [slug, setSlug] = useState('');
+  const [autoBilling, setAutoBilling] = useState(false);
+  const [autoBillingDay, setAutoBillingDay] = useState(1);
+
+  function applyAuto(data: Settings) {
+    setAutoBilling(data.autoBillingEnabled);
+    setAutoBillingDay(data.autoBillingDay);
+  }
 
   async function refresh() {
     setLoading(true);
@@ -71,6 +80,7 @@ export default function SettingsPage() {
       const data = await api<Settings>('/settings');
       setForm(toForm(data));
       setSlug(data.slug);
+      applyAuto(data);
     } finally {
       setLoading(false);
     }
@@ -101,9 +111,14 @@ export default function SettingsPage() {
 
       const updated = await api<Settings>('/settings', {
         method: 'PATCH',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          autoBillingEnabled: autoBilling,
+          autoBillingDay,
+        }),
       });
       setForm(toForm(updated));
+      applyAuto(updated);
       setSavedAt(new Date());
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error de red');
@@ -232,6 +247,47 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-500">
             El identificador de acreedor lo proporciona tu banco. Necesario para
             generar remesas de domiciliación.
+          </p>
+        </section>
+
+        <section className="border-t pt-5 space-y-3">
+          <h2 className="font-medium">Facturación automática</h2>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={autoBilling}
+              onChange={(e) => {
+                setAutoBilling(e.target.checked);
+                setSavedAt(null);
+              }}
+            />
+            Generar las mensualidades automáticamente cada mes
+          </label>
+          {autoBilling && (
+            <label className="block text-sm">
+              <span className="text-xs text-gray-600 block mb-1">
+                Día del mes (1–28)
+              </span>
+              <select
+                value={autoBillingDay}
+                onChange={(e) => {
+                  setAutoBillingDay(Number(e.target.value));
+                  setSavedAt(null);
+                }}
+                className="border rounded px-2 py-1 text-sm bg-white"
+              >
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <p className="text-xs text-gray-500">
+            Cada mes, el día elegido, se crean las facturas de las inscripciones
+            activas con cuota (igual que el botón «Generar mensualidades», sin
+            duplicar las que ya existan). Desactivado por defecto.
           </p>
         </section>
 
