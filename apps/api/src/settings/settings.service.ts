@@ -15,6 +15,8 @@ const SETTINGS_SELECT = {
   iban: true,
   sepaCreditorId: true,
   invoicePrefix: true,
+  autoBillingEnabled: true,
+  autoBillingDay: true,
 } as const;
 
 @Injectable()
@@ -43,6 +45,8 @@ export class SettingsService {
         iban: dto.iban,
         sepaCreditorId: dto.sepaCreditorId,
         invoicePrefix: dto.invoicePrefix,
+        autoBillingEnabled: dto.autoBillingEnabled,
+        autoBillingDay: dto.autoBillingDay,
       },
       select: SETTINGS_SELECT,
     });

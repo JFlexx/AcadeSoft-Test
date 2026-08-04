@@ -171,6 +171,34 @@ export class BillingService {
     return { period, dryRun: !!dto.dryRun, summary, results };
   }
 
+  /**
+   * Generates the current month's invoices for every tenant that has opted in
+   * to automatic billing and whose configured day is today. Idempotent
+   * (generateMonth skips invoices that already exist). Run daily by a cron.
+   */
+  async runScheduledBilling(now: Date = new Date()) {
+    const day = now.getDate();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+
+    const tenants = await this.prisma.tenant.findMany({
+      where: { autoBillingEnabled: true, autoBillingDay: day },
+      select: { id: true },
+    });
+
+    let created = 0;
+    for (const t of tenants) {
+      const res = await this.generateMonth(t.id, { month, year });
+      created += res.summary.created;
+    }
+
+    return {
+      period: `${year}-${month.toString().padStart(2, '0')}`,
+      tenants: tenants.length,
+      created,
+    };
+  }
+
   // ─── SEPA direct debit remittance ───────────────────────────────────────────
 
   private async collectSepaItems(tenantId: string, dto: SepaRemittanceDto) {
