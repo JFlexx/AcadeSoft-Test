@@ -10,10 +10,13 @@
 
 **AcadeSoft es un programa por internet (SaaS) para gestionar una academia:**
 alumnos, profesores, clases, asistencia, facturación y cobros — incluyendo el
-cumplimiento legal de la facturación española (Veri\*Factu) y las
-domiciliaciones bancarias (SEPA).
+**cobro online con tarjeta**, un **portal para las familias**, la
+**inscripción online** de nuevos alumnos, el cumplimiento legal de la
+facturación española (Veri\*Factu) y las domiciliaciones bancarias (SEPA).
 
-Es un competidor mejorado de **Acadesoft** (acadesoft.com).
+Es un competidor mejorado de **Acadesoft** (acadesoft.com): mismo tipo de
+cliente, pero como **SaaS moderno** — la operación y el cobro tienden al
+piloto automático, y las familias se auto-gestionan.
 
 ---
 
@@ -92,8 +95,13 @@ Al entrar, en el menú lateral hay estas secciones:
 
 ### 8. Cobros y pagos
 - Registrar pagos en **efectivo, tarjeta o transferencia**, totales o parciales.
-- La factura cambia de estado sola: pendiente → parcial → **cobrada**
-  (o vencida / anulada).
+- **Pago online con tarjeta**: la factura lleva un botón "Pagar con tarjeta"
+  (y las familias pueden pagar desde su portal). El cobro se procesa en una
+  página segura de **Stripe** y la factura se marca **pagada sola**.
+- La factura cambia de estado sola: pendiente → parcial → **cobrada**.
+- **Detección automática de impagos**: las facturas que pasan de su fecha de
+  vencimiento sin pagar se marcan como **vencidas** cada día, para saber a
+  quién hay que reclamar.
 - Totales de **facturado, cobrado y pendiente** a la vista.
 
 ### 9. Mensualidades recurrentes
@@ -124,6 +132,9 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
 ### 12. Panel de inicio (dashboard)
 - Cifras clave nada más entrar: alumnos activos, grupos activos, clases de la
   semana, facturado y cobrado del mes, y facturas pendientes.
+- **Cuadro de mando accionable**: qué **cobros están pendientes** (para
+  reclamar), las **solicitudes de inscripción** por aprobar y la **ocupación
+  de cada grupo** (lleno / con plazas).
 
 ### 13. Multi-academia y alta autoservicio
 - Una sola plataforma sirve a muchas academias con sus datos **aislados**.
@@ -136,16 +147,36 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
 - **Protección contra ataques de fuerza bruta y registros masivos** (límite de
   intentos por minuto).
 
+### 15. Portal de familias
+- Cada familia puede tener su **propio acceso** para ver, en modo consulta, la
+  información de sus hijos: **grupos, facturas y asistencia**.
+- El padre/madre puede **pagar las facturas con tarjeta** desde el portal.
+- La academia **da y quita** el acceso desde la ficha del alumno; un mismo
+  acceso puede cubrir a **varios hermanos**.
+
+### 16. Inscripción online (self-service)
+- La academia comparte un **enlace público** (desde Ajustes) para que una
+  familia se **inscriba sola** desde la web, sin que nadie teclee sus datos.
+- Muestra los grupos con plaza; la solicitud llega como **inscripción
+  pendiente** de aprobar (aparece en el panel de inicio).
+
+### 17. Importar y exportar datos
+- **Importar alumnos desde un CSV/Excel** (con mapeo de columnas y vista
+  previa): traer los datos de otro sistema en minutos.
+- **Exportar** alumnos y facturas a CSV, y el calendario a `.ics`
+  (Google/Apple Calendar).
+
 ---
 
 ## Qué **todavía no** cubre (hoja de ruta)
 
 Somos honestos sobre lo que falta:
 
-- **Mensajería por email** a alumnos o grupos (requiere contratar un proveedor
-  de envío de correo).
-- **Portal de familias**: que el padre/madre o alumno entre con su propio
-  usuario a ver sus facturas y asistencia.
+- **Mensajería por email** a alumnos o grupos, incluidos **recordatorios
+  automáticos** de facturas vencidas (requiere contratar un proveedor de envío
+  de correo).
+- **Generación automática** de las mensualidades cada mes (hoy se lanza con un
+  clic; la app ya detecta las vencidas sola).
 - **Envío automático a la Agencia Tributaria** de los registros Veri\*Factu (la
   app ya genera la huella y el QR; el envío en tiempo real requiere el
   certificado digital de una academia real ya en producción).
