@@ -51,6 +51,8 @@ type Invoice = {
   rectifiesId: string | null;
   rectifies: { id: string; number: string } | null;
   rectifiedBy: { id: string; number: string }[];
+  reminderCount: number;
+  lastReminderAt: string | null;
   student: Student;
   payments: Payment[];
 };
@@ -504,6 +506,16 @@ export default function InvoiceDetailPage() {
         <span>{formatDate(invoice.issueDate)}</span>
         <span className="text-gray-500">Vencimiento</span>
         <span>{formatDate(invoice.dueDate)}</span>
+        {invoice.reminderCount > 0 && (
+          <>
+            <span className="text-gray-500">Recordatorios</span>
+            <span>
+              {invoice.reminderCount} enviado(s)
+              {invoice.lastReminderAt &&
+                ` · último ${formatDate(invoice.lastReminderAt)}`}
+            </span>
+          </>
+        )}
         <span className="text-gray-500">Importe</span>
         <span className="font-medium">{formatEur(invoice.amount)}</span>
         <span className="text-gray-500">Cobrado</span>

@@ -19,6 +19,8 @@ type Settings = {
   invoicePrefix: string;
   autoBillingEnabled: boolean;
   autoBillingDay: number;
+  remindersEnabled: boolean;
+  emailConfigured: boolean;
 };
 
 type FormState = {
@@ -68,10 +70,14 @@ export default function SettingsPage() {
   const [slug, setSlug] = useState('');
   const [autoBilling, setAutoBilling] = useState(false);
   const [autoBillingDay, setAutoBillingDay] = useState(1);
+  const [reminders, setReminders] = useState(false);
+  const [emailConfigured, setEmailConfigured] = useState(false);
 
   function applyAuto(data: Settings) {
     setAutoBilling(data.autoBillingEnabled);
     setAutoBillingDay(data.autoBillingDay);
+    setReminders(data.remindersEnabled);
+    setEmailConfigured(data.emailConfigured);
   }
 
   async function refresh() {
@@ -115,6 +121,7 @@ export default function SettingsPage() {
           ...payload,
           autoBillingEnabled: autoBilling,
           autoBillingDay,
+          remindersEnabled: reminders,
         }),
       });
       setForm(toForm(updated));
@@ -288,6 +295,32 @@ export default function SettingsPage() {
             Cada mes, el día elegido, se crean las facturas de las inscripciones
             activas con cuota (igual que el botón «Generar mensualidades», sin
             duplicar las que ya existan). Desactivado por defecto.
+          </p>
+        </section>
+
+        <section className="border-t pt-5 space-y-3">
+          <h2 className="font-medium">Recordatorios de impago</h2>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={reminders}
+              onChange={(e) => {
+                setReminders(e.target.checked);
+                setSavedAt(null);
+              }}
+            />
+            Enviar un email a la familia cuando una factura venza
+          </label>
+          {reminders && !emailConfigured && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              El envío de email aún no está configurado: los recordatorios no
+              saldrán hasta que se añada la clave de Resend en el servidor.
+            </p>
+          )}
+          <p className="text-xs text-gray-500">
+            Se avisa a los tutores (o al alumno si no hay tutor) como mucho una
+            vez cada 7 días y un máximo de 3 veces por factura. Desactivado por
+            defecto.
           </p>
         </section>
 
