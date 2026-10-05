@@ -41,7 +41,8 @@ JWT. El alta de nuevas academias es autoservicio (`POST /auth/signup`).
 `auth`, `users`, `students`, `teachers`, `courses`, `groups`, `enrollments`,
 `sessions`, `attendance`, `invoices`, `billing`, `settings`, `portal` (familias,
 solo rol `guardian`), `public` (inscripción online sin auth), `stripe`
-(checkout + webhook), más un `HealthController`.
+(checkout + webhook), `email` (global, Resend), `reminders`, `messages`, más
+un `HealthController`.
 
 **RBAC:** los controladores de datos exigen rol `admin` (`RolesGuard`); el
 portal exige `guardian`; `public`/`stripe/webhook` son sin auth (rate limit /
@@ -85,7 +86,7 @@ firma de Stripe). `/users/me` queda abierto a cualquier autenticado.
 
 ## Pendiente / hoja de ruta
 
-- Activar el envío real de email (clave de Resend + dominio verificado).
-- Mensajería libre por email a alumno/grupo.
+- Verificar un dominio de envío en Resend (uno para toda la plataforma: cada
+  email sale con el nombre de la academia y `replyTo` a su contacto).
 - Envío en tiempo real a la AEAT de los registros Veri\*Factu (requiere
   certificado de una academia real en producción).

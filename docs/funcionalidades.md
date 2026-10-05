@@ -48,6 +48,7 @@ Al entrar, en el menú lateral hay estas secciones:
 | **Cursos** | Las materias que se imparten (Inglés, Piano, Matemáticas…), con color. |
 | **Grupos** | Las clases concretas dentro de un curso, con su cuota mensual, aforo y profesor. |
 | **Calendario** | Agenda de clases en vista semanal o mensual. Exportable a Google/Apple Calendar. |
+| **Mensajes** | Enviar un email a un grupo o a la familia de un alumno, con historial de lo enviado. |
 | **Facturas** | Todas las facturas, con su estado de cobro. Exportable a Excel. |
 | **Mensualidades** | Generar de golpe las facturas del mes y la remesa bancaria SEPA. |
 | **Ajustes** | Datos fiscales de la academia, contacto y configuración bancaria. |
@@ -171,17 +172,26 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
 - **Exportar** alumnos y facturas a CSV, y el calendario a `.ics`
   (Google/Apple Calendar).
 
+### 18. Mensajes por email
+- Escribir un email a **un grupo entero** o a **la familia de un alumno**
+  (clase cancelada, avisos generales…).
+- Antes de enviar se ve **a cuántas familias llegará** y qué alumnos no tienen
+  email; se pide confirmación.
+- **Privacidad**: cada familia recibe su propio email (nadie ve las direcciones
+  de los demás) y los hermanos con el mismo tutor reciben uno solo.
+- Los emails salen **con el nombre de la academia** y las respuestas llegan a
+  su email de contacto.
+- **Historial** de todo lo enviado.
+
 ---
 
 ## Qué **todavía no** cubre (hoja de ruta)
 
 Somos honestos sobre lo que falta:
 
-- **Conectar la cuenta de email** (Resend): los recordatorios de impago ya
-  están construidos; solo falta la clave del proveedor para que empiecen a
-  enviarse.
-- **Mensajería libre por email** a un alumno o a un grupo (avisos generales,
-  clase cancelada, etc.).
+- **Dominio propio para el email**: el envío ya funciona, pero hasta verificar
+  un dominio solo puede enviarse a la cuenta de pruebas. Con un dominio (uno
+  para toda la plataforma) los emails llegan a cualquier familia.
 - **Envío automático a la Agencia Tributaria** de los registros Veri\*Factu (la
   app ya genera la huella y el QR; el envío en tiempo real requiere el
   certificado digital de una academia real ya en producción).

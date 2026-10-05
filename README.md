@@ -121,6 +121,8 @@ Producto demoable y onboardeable. Resumen no técnico en
   **recordatorios de impago por email** (Resend, opt-in, anti-spam).
 - **Facturación automática** mensual opt-in (día configurable) además del
   botón manual.
+- **Mensajes por email** a un grupo o a un alumno (vista previa, un email por
+  destinatario, historial).
 - **Banca**: remesa de domiciliación SEPA (`pain.008`).
 - **Cumplimiento Veri\*Factu**: cadena de hash anti-manipulación, QR AEAT en el
   PDF, facturas rectificativas, inmutabilidad.
@@ -136,9 +138,8 @@ Suite e2e (Jest + Supertest) en verde como puerta de calidad de cada merge.
 
 ### Hoja de ruta (pendiente)
 
-- Activar el envío real de email (clave de Resend + dominio verificado): los
-  recordatorios ya están implementados.
-- Mensajería libre por email a alumno/grupo.
+- Verificar un dominio en Resend para enviar a cualquier familia (el envío ya
+  funciona; sin dominio solo llega a la cuenta de pruebas).
 - Envío en tiempo real a la AEAT de Veri\*Factu (requiere certificado de una
   academia real en producción).
 
