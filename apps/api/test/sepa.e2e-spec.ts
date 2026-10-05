@@ -88,6 +88,27 @@ describe('SEPA remittance (e2e)', () => {
     return res.body.id;
   }
 
+  it('includes OVERDUE invoices (past due is exactly what needs collecting)', async () => {
+    await setCreditorConfig(acmeToken);
+    const student = await createStudentWithMandate(acmeToken);
+    const invoiceId = await createInvoice(acmeToken, student, 40, '2026-10-05');
+    // what the daily overdue cron does
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: { status: 'OVERDUE' },
+    });
+
+    const res = await http()
+      .post('/billing/sepa-remittance/preview')
+      .set(bearer(acmeToken))
+      .send({ month: 10, year: 2026 })
+      .expect(201);
+
+    expect(res.body.count).toBe(1);
+    expect(res.body.included[0].invoiceId).toBe(invoiceId);
+    expect(res.body.totalAmount).toBe('40.00');
+  });
+
   it('previews a remittance with included and skipped invoices', async () => {
     await setCreditorConfig(acmeToken);
     const withMandate = await createStudentWithMandate(acmeToken);
