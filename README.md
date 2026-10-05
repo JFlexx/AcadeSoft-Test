@@ -76,6 +76,7 @@ Cada `it()` arranca con la BD truncada y un seed mínimo (1 tenant + 1 admin rol
 - [Arquitectura](docs/architecture.md)
 - [Convenciones de código y naming](docs/conventions.md)
 - [Cómo arrancar y demo](docs/getting-started.md)
+- [Despliegue a producción (Docker)](docs/deploy.md)
 
 ## Git flow
 
