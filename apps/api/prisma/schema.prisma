@@ -105,6 +105,7 @@ model Tenant {
   invoices  Invoice[]
   payments  Payment[]
   auditLogs AuditLog[]
+  messages  Message[]
 
   @@map("tenants")
 }
@@ -414,4 +415,33 @@ model AuditLog {
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, createdAt])
   @@map("audit_logs")
+}
+
+// ─── Messaging ────────────────────────────────────────────────────────────────
+
+enum MessageTarget {
+  GROUP
+  STUDENT
+}
+
+/// Email sent by an academy to a group or a student's family. History only:
+/// no FK to group/student so deleting them keeps the record (targetLabel).
+model Message {
+  id             String        @id @default(cuid())
+  tenantId       String
+  subject        String
+  body           String
+  targetType     MessageTarget
+  targetId       String
+  targetLabel    String
+  recipientCount Int           @default(0)
+  sentCount      Int           @default(0)
+  failedCount    Int           @default(0)
+  createdById    String?
+  createdAt      DateTime      @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("messages")
 }

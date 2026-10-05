@@ -22,6 +22,7 @@ import { PublicModule } from './public/public.module';
 import { StripeModule } from './stripe/stripe.module';
 import { EmailModule } from './email/email.module';
 import { RemindersModule } from './reminders/reminders.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { RemindersModule } from './reminders/reminders.module';
     StripeModule,
     EmailModule,
     RemindersModule,
+    MessagesModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
