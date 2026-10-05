@@ -1,6 +1,6 @@
 # Despliegue a producción
 
-Cómo desplegar la API con Docker. Para arrancar en local, ver
+Cómo desplegar la API y la web con Docker. Para arrancar en local, ver
 [getting-started.md](getting-started.md).
 
 ## Imagen de la API
@@ -37,7 +37,30 @@ pnpm --filter api exec prisma generate && pnpm --filter api build
 pnpm --filter api start:prod   # migrate deploy + node dist/main
 ```
 
-## Variables de entorno
+## Imagen de la web
+
+El Dockerfile está en `apps/web/Dockerfile` y genera la salida *standalone*
+de Next.js, que no necesita `node_modules`. La URL de la API se mete en el
+código del navegador **al construir** la imagen, así que se pasa como
+argumento de build:
+
+```bash
+docker build -f apps/web/Dockerfile \
+  --build-arg NEXT_PUBLIC_API_URL=https://api.midominio.com -t acedesoft-web .
+```
+
+- Si falta el argumento, el build falla a propósito. Así no se publica una
+  web que apunta a `localhost`.
+- Cambiar la URL de la API implica **reconstruir** la imagen.
+- En runtime solo se usa `PORT`, por defecto 3000.
+- Corre como `node`, con `tini` y un `HEALTHCHECK` contra `/login`.
+- `WEB_ORIGIN` en la API debe ser exactamente la URL pública de esta web,
+  por CORS.
+
+Cada imagen tiene su propio `.dockerignore` (`apps/*/Dockerfile.dockerignore`).
+Ninguna incluye ficheros `.env`.
+
+## Variables de entorno de la API
 
 La API **valida la configuración al arrancar**. Si falta algo o hay un valor
 inseguro, se niega a arrancar y lista todos los problemas a la vez.
