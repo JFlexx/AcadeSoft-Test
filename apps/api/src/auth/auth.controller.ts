@@ -15,6 +15,9 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { SignupDto } from './dto/signup.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -74,6 +77,39 @@ export class AuthController {
   async logout(@CurrentUser('userId') userId: string, @Res({ passthrough: true }) res: Response) {
     await this.authService.logout(userId);
     res.clearCookie(REFRESH_COOKIE, { path: '/auth' });
+  }
+
+  // Same response whether or not the account exists (no user enumeration).
+  @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
+  @HttpCode(HttpStatus.OK)
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    await this.authService.forgotPassword(dto);
+    return { ok: true };
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60 * 60 * 1000 } })
+  @HttpCode(HttpStatus.OK)
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto);
+    return { ok: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('change-password')
+  async changePassword(
+    @CurrentUser('userId') userId: string,
+    @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken } = await this.authService.changePassword(
+      userId,
+      dto,
+    );
+    this.setRefreshCookie(res, refreshToken);
+    return { accessToken };
   }
 
   private setRefreshCookie(res: Response, token: string) {
