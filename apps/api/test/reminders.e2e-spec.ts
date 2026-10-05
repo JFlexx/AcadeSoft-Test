@@ -130,6 +130,41 @@ describe('Overdue payment reminders (e2e)', () => {
     expect(st.lastReminderAt).not.toBeNull();
   });
 
+  it("sends as the academy and routes replies to the academy's contact email", async () => {
+    await http()
+      .patch('/settings')
+      .set(bearer(token))
+      .send({ name: 'Academia Acme', contactEmail: 'hola@acme.es', remindersEnabled: true })
+      .expect(200);
+    await overdueInvoice({ studentEmail: 'ana@example.com' });
+
+    await reminders.sendOverdueReminders();
+    const arg = mockSend.mock.calls[0][0];
+    expect(arg.from).toBe('"Academia Acme" <onboarding@resend.dev>');
+    expect(arg.replyTo).toBe('hola@acme.es');
+  });
+
+  it('omits replyTo when the academy has no contact email', async () => {
+    await enableReminders();
+    await overdueInvoice({ studentEmail: 'ana@example.com' });
+    await reminders.sendOverdueReminders();
+    expect(mockSend.mock.calls[0][0]).not.toHaveProperty('replyTo');
+  });
+
+  it('sanitizes the sender name (no header injection)', async () => {
+    await http()
+      .patch('/settings')
+      .set(bearer(token))
+      .send({ name: 'Acme "x" <evil@x.com>\r\nBcc: victim@x.com', remindersEnabled: true })
+      .expect(200);
+    await overdueInvoice({ studentEmail: 'ana@example.com' });
+
+    await reminders.sendOverdueReminders();
+    const from: string = mockSend.mock.calls[0][0].from;
+    expect(from).not.toMatch(/[\r\n]/);
+    expect(from).toMatch(/^"[^"<>]*" <onboarding@resend\.dev>$/);
+  });
+
   it('falls back to the student email when there is no guardian email', async () => {
     await enableReminders();
     await overdueInvoice({ studentEmail: 'ana@example.com' });

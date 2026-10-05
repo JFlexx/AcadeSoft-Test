@@ -88,7 +88,10 @@ export class RemindersService {
           : null,
       };
 
-      const ok = await this.email.send(to, reminderSubject(data), reminderHtml(data));
+      const ok = await this.email.send(to, reminderSubject(data), reminderHtml(data), {
+        fromName: inv.tenant.name,
+        replyTo: inv.tenant.contactEmail,
+      });
       if (!ok) {
         skipped++;
         continue;
