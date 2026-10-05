@@ -65,8 +65,14 @@ firma de Stripe). `/users/me` queda abierto a cualquier autenticado.
   y `POST /portal/invoices/:id/checkout` (familia) crean una sesión de pago;
   `POST /stripe/webhook` (firma verificada con `rawBody`) registra el cobro de
   forma idempotente.
-- **Vencidas**: cron diario (`@nestjs/schedule`) marca `OVERDUE` las facturas
-  con saldo pasadas de fecha.
+- **Vencidas**: cron diario (`@nestjs/schedule`, 6:00) marca `OVERDUE` las
+  facturas con saldo pasadas de fecha.
+- **Facturación automática** (opt-in por tenant): cron diario (5:00) que lanza
+  `generateMonth` el día configurado (`autoBillingDay`, 1–28). Idempotente.
+- **Recordatorios de impago** (opt-in por tenant): cron diario (9:00) que envía
+  email (Resend, `EmailService` global; no-op sin `RESEND_API_KEY`) por cada
+  factura `OVERDUE`; máx. 1 cada 7 días y 3 por factura
+  (`lastReminderAt`/`reminderCount`). La remesa SEPA también incluye `OVERDUE`.
 - Generación de remesa de domiciliación SEPA `pain.008.001.02` a partir de las
   facturas pendientes del mes — ver `apps/api/src/billing/sepa.ts`.
 
@@ -79,8 +85,7 @@ firma de Stripe). `/users/me` queda abierto a cualquier autenticado.
 
 ## Pendiente / hoja de ruta
 
-- Mensajería por email + recordatorios automáticos de impago (proveedor por
-  decidir, p. ej. Resend).
-- Generación automática mensual de mensualidades (hoy manual con un clic).
+- Activar el envío real de email (clave de Resend + dominio verificado).
+- Mensajería libre por email a alumno/grupo.
 - Envío en tiempo real a la AEAT de los registros Veri\*Factu (requiere
   certificado de una academia real en producción).
