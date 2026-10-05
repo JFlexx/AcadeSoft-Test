@@ -134,6 +134,8 @@ model User {
   lastName     String
   status       UserStatus @default(ACTIVE)
   refreshToken String?
+  passwordResetTokenHash String?   @unique
+  passwordResetExpiresAt DateTime?
   lastLoginAt  DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
