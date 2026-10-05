@@ -98,6 +98,20 @@ describe('Overdue payment reminders (e2e)', () => {
     });
   }
 
+  it('settings expose the opt-in (off by default) and whether email is configured', async () => {
+    const res = await http().get('/settings').set(bearer(token)).expect(200);
+    expect(res.body.remindersEnabled).toBe(false);
+    expect(res.body.emailConfigured).toBe(true); // dummy key in .env.test
+
+    const upd = await http()
+      .patch('/settings')
+      .set(bearer(token))
+      .send({ remindersEnabled: true })
+      .expect(200);
+    expect(upd.body.remindersEnabled).toBe(true);
+    expect(upd.body.emailConfigured).toBe(true);
+  });
+
   it('emails the guardian of an overdue invoice and records it', async () => {
     await enableReminders();
     const inv = await overdueInvoice({ studentEmail: 'ana@example.com', guardianEmail: 'madre@example.com' });

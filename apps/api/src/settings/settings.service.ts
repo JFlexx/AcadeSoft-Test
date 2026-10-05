@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 
 const SETTINGS_SELECT = {
@@ -22,7 +23,10 @@ const SETTINGS_SELECT = {
 
 @Injectable()
 export class SettingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly email: EmailService,
+  ) {}
 
   async get(tenantId: string) {
     const tenant = await this.prisma.tenant.findUnique({
@@ -30,11 +34,11 @@ export class SettingsService {
       select: SETTINGS_SELECT,
     });
     if (!tenant) throw new NotFoundException();
-    return tenant;
+    return { ...tenant, emailConfigured: this.email.enabled };
   }
 
   async update(tenantId: string, dto: UpdateSettingsDto) {
-    return this.prisma.tenant.update({
+    const tenant = await this.prisma.tenant.update({
       where: { id: tenantId },
       data: {
         name: dto.name,
@@ -52,5 +56,6 @@ export class SettingsService {
       },
       select: SETTINGS_SELECT,
     });
+    return { ...tenant, emailConfigured: this.email.enabled };
   }
 }
