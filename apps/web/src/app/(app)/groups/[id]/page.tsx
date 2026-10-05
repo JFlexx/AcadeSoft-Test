@@ -360,7 +360,12 @@ export default function GroupDetailPage() {
       </div>
 
       <header className="mb-6">
-        <h1 className="text-xl font-semibold">{group.name}</h1>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h1 className="text-xl font-semibold">{group.name}</h1>
+          <Link href={`/messages?groupId=${group.id}`} className="btn-secondary">
+            Enviar mensaje al grupo
+          </Link>
+        </div>
         {group.description && (
           <p className="text-sm text-gray-600 mt-1">{group.description}</p>
         )}
