@@ -223,7 +223,8 @@ export class BillingService {
     const invoices = await this.prisma.invoice.findMany({
       where: {
         tenantId,
-        status: { in: ['PENDING', 'PARTIAL'] },
+        // OVERDUE invoices still owe money — they're exactly what to collect.
+        status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] },
         issueDate: { gte: periodStart, lt: periodEnd },
       },
       include: {
