@@ -117,7 +117,10 @@ Producto demoable y onboardeable. Resumen no técnico en
 - **Cobro (núcleo)**: facturas, PDF, pagos parciales/totales, mensualidades
   recurrentes, descuentos familia/hermanos.
 - **Cobro online**: pago con tarjeta vía **Stripe Checkout** (factura + portal)
-  con webhook firmado; detección **automática de vencidas** (cron diario).
+  con webhook firmado; detección **automática de vencidas** (cron diario);
+  **recordatorios de impago por email** (Resend, opt-in, anti-spam).
+- **Facturación automática** mensual opt-in (día configurable) además del
+  botón manual.
 - **Banca**: remesa de domiciliación SEPA (`pain.008`).
 - **Cumplimiento Veri\*Factu**: cadena de hash anti-manipulación, QR AEAT en el
   PDF, facturas rectificativas, inmutabilidad.
@@ -133,9 +136,9 @@ Suite e2e (Jest + Supertest) en verde como puerta de calidad de cada merge.
 
 ### Hoja de ruta (pendiente)
 
-- Mensajería por email (+ recordatorios automáticos de impago) — proveedor por
-  decidir (Resend).
-- Generación automática mensual de las mensualidades (hoy con un clic).
+- Activar el envío real de email (clave de Resend + dominio verificado): los
+  recordatorios ya están implementados.
+- Mensajería libre por email a alumno/grupo.
 - Envío en tiempo real a la AEAT de Veri\*Factu (requiere certificado de una
   academia real en producción).
 

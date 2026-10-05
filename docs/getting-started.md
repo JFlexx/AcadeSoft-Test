@@ -84,6 +84,19 @@ STRIPE_WEBHOOK_SECRET="whsec_..."    # de `stripe listen --forward-to localhost:
 Tarjeta de test: `4242 4242 4242 4242`. Sin claves, el resto de la app funciona
 igual; solo el botón "Pagar con tarjeta" queda inactivo.
 
+### Email (Resend, opcional)
+
+Para que salgan los recordatorios de impago, en `apps/api/.env`:
+
+```
+RESEND_API_KEY="re_..."
+EMAIL_FROM="Tu Academia <no-reply@tudominio.com>"   # dominio verificado en Resend
+```
+
+Sin clave, el envío queda desactivado (Ajustes lo avisa) y nada se rompe.
+Sin dominio verificado, Resend solo permite enviar desde
+`onboarding@resend.dev` a tu propio email (útil para probar).
+
 ## Tests
 
 Suite e2e con Jest + Supertest contra una base separada `acedesoft_test`.

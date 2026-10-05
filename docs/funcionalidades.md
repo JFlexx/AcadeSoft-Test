@@ -102,6 +102,9 @@ Al entrar, en el menú lateral hay estas secciones:
 - **Detección automática de impagos**: las facturas que pasan de su fecha de
   vencimiento sin pagar se marcan como **vencidas** cada día, para saber a
   quién hay que reclamar.
+- **Recordatorios automáticos por email** (opcional): cuando una factura vence,
+  la familia recibe un aviso (como mucho uno cada 7 días y 3 en total). Se
+  activa en Ajustes y necesita tener configurado el envío de email.
 - Totales de **facturado, cobrado y pendiente** a la vista.
 
 ### 9. Mensualidades recurrentes
@@ -110,6 +113,8 @@ Al entrar, en el menú lateral hay estas secciones:
 - **Vista previa** antes de generar, y es **idempotente**: si se vuelve a
   lanzar, no duplica las que ya existen.
 - Aplica automáticamente los descuentos de familia.
+- **Opcional: en automático**. En Ajustes se puede activar que las
+  mensualidades se generen solas cada mes, el día elegido (1–28).
 
 ### 10. Domiciliación bancaria (SEPA)
 - Genera el **fichero XML que se sube al banco** para cobrar por domiciliación
@@ -172,11 +177,11 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
 
 Somos honestos sobre lo que falta:
 
-- **Mensajería por email** a alumnos o grupos, incluidos **recordatorios
-  automáticos** de facturas vencidas (requiere contratar un proveedor de envío
-  de correo).
-- **Generación automática** de las mensualidades cada mes (hoy se lanza con un
-  clic; la app ya detecta las vencidas sola).
+- **Conectar la cuenta de email** (Resend): los recordatorios de impago ya
+  están construidos; solo falta la clave del proveedor para que empiecen a
+  enviarse.
+- **Mensajería libre por email** a un alumno o a un grupo (avisos generales,
+  clase cancelada, etc.).
 - **Envío automático a la Agencia Tributaria** de los registros Veri\*Factu (la
   app ya genera la huella y el QR; el envío en tiempo real requiere el
   certificado digital de una academia real ya en producción).
