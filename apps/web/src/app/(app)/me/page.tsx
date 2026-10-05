@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/lib/auth-context';
+import { ChangePasswordForm } from '@/components/change-password-form';
 
 export default function MePage() {
   const { user } = useAuth();
@@ -26,6 +27,11 @@ export default function MePage() {
         <dt className="text-gray-500">Estado</dt>
         <dd>{user.status}</dd>
       </dl>
+
+      <section className="mt-8 border-t pt-6">
+        <h2 className="font-medium mb-3">Cambiar contraseña</h2>
+        <ChangePasswordForm />
+      </section>
     </div>
   );
 }

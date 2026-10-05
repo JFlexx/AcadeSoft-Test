@@ -2,7 +2,8 @@
 
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import Link from 'next/link';
+import { CircleUser, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export default function PortalLayout({ children }: { children: ReactNode }) {
@@ -43,14 +44,23 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
               <p className="text-xs text-gray-500 truncate">{user.tenant.name}</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            disabled={signingOut}
-            className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 disabled:opacity-50"
-          >
-            <LogOut className="h-4 w-4" />
-            {signingOut ? 'Saliendo…' : 'Salir'}
-          </button>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/portal/account"
+              className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+            >
+              <CircleUser className="h-4 w-4" />
+              Mi cuenta
+            </Link>
+            <button
+              onClick={handleLogout}
+              disabled={signingOut}
+              className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 disabled:opacity-50"
+            >
+              <LogOut className="h-4 w-4" />
+              {signingOut ? 'Saliendo…' : 'Salir'}
+            </button>
+          </div>
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">{children}</main>

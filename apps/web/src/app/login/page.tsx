@@ -103,6 +103,12 @@ export default function LoginPage() {
           {submitting ? 'Entrando…' : 'Entrar'}
         </button>
 
+        <p className="text-sm text-center">
+          <Link href="/forgot-password" className="text-gray-600 hover:underline">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </p>
+
         <p className="text-sm text-gray-600 text-center">
           ¿No tienes cuenta?{' '}
           <Link href="/signup" className="text-brand-700 hover:underline">
