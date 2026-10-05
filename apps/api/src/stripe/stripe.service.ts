@@ -11,7 +11,9 @@ import { computeStatus } from '../invoices/invoices.service';
 
 @Injectable()
 export class StripeService {
-  private readonly stripe: Stripe;
+  // null when no key is set: card payments are optional, and the SDK throws
+  // on an empty key, which would stop the whole API from booting.
+  private readonly stripe: Stripe | null;
   private readonly webhookSecret: string;
   private readonly webOrigin: string;
 
@@ -19,18 +21,20 @@ export class StripeService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    this.stripe = new Stripe(config.get<string>('STRIPE_SECRET_KEY') ?? '');
+    const key = config.get<string>('STRIPE_SECRET_KEY');
+    this.stripe = key ? new Stripe(key) : null;
     this.webhookSecret = config.get<string>('STRIPE_WEBHOOK_SECRET') ?? '';
     this.webOrigin =
       config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000';
   }
 
-  private ensureConfigured() {
-    if (!this.config.get<string>('STRIPE_SECRET_KEY')) {
+  private ensureConfigured(): Stripe {
+    if (!this.stripe) {
       throw new BadRequestException(
         'Los pagos con tarjeta no están configurados. Añade tu clave de Stripe.',
       );
     }
+    return this.stripe;
   }
 
   /**
@@ -39,7 +43,7 @@ export class StripeService {
    * invoice belongs to `tenantId` (and, for the portal, to the guardian).
    */
   async createInvoiceCheckout(tenantId: string, invoiceId: string) {
-    this.ensureConfigured();
+    const stripe = this.ensureConfigured();
 
     const invoice = await this.prisma.invoice.findFirst({
       where: { id: invoiceId, tenantId },
@@ -53,7 +57,7 @@ export class StripeService {
     const pending = invoice.amount.sub(invoice.paidAmount);
     if (pending.lte(0)) throw new BadRequestException('No hay importe pendiente');
 
-    const session = await this.stripe.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [
         {
@@ -80,9 +84,13 @@ export class StripeService {
 
   /** Verifies the Stripe signature and applies the paid invoice. */
   async handleWebhook(rawBody: Buffer, signature: string) {
+    const stripe = this.ensureConfigured();
+    if (!this.webhookSecret) {
+      throw new BadRequestException('Webhook de Stripe no configurado');
+    }
     let event: Stripe.Event;
     try {
-      event = this.stripe.webhooks.constructEvent(
+      event = stripe.webhooks.constructEvent(
         rawBody,
         signature,
         this.webhookSecret,
