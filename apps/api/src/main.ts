@@ -28,7 +28,11 @@ async function bootstrap() {
     }),
   );
 
-  const port = config.get<number>('API_PORT', 3001);
+  // Close Prisma and stop cron jobs cleanly when the platform sends SIGTERM.
+  app.enableShutdownHooks();
+
+  // PORT is what hosting platforms inject; API_PORT is the local default.
+  const port = config.get<number>('PORT') ?? config.get<number>('API_PORT', 3001);
   await app.listen(port);
   console.log(`API listening on http://localhost:${port}`);
 }
