@@ -92,6 +92,7 @@ model Tenant {
   sepaCreditorId String?
   autoBillingEnabled Boolean  @default(false)
   autoBillingDay     Int      @default(1)
+  remindersEnabled   Boolean  @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -352,6 +353,8 @@ model Invoice {
   hash          String?
   previousHash  String?
   hashedAt      DateTime?
+  lastReminderAt DateTime?
+  reminderCount  Int           @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

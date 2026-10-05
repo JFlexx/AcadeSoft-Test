@@ -64,4 +64,8 @@ export class UpdateSettingsDto {
   @Min(1)
   @Max(28)
   autoBillingDay?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  remindersEnabled?: boolean;
 }

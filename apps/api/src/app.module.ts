@@ -20,6 +20,8 @@ import { SettingsModule } from './settings/settings.module';
 import { PortalModule } from './portal/portal.module';
 import { PublicModule } from './public/public.module';
 import { StripeModule } from './stripe/stripe.module';
+import { EmailModule } from './email/email.module';
+import { RemindersModule } from './reminders/reminders.module';
 
 @Module({
   imports: [
@@ -57,6 +59,8 @@ import { StripeModule } from './stripe/stripe.module';
     PortalModule,
     PublicModule,
     StripeModule,
+    EmailModule,
+    RemindersModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
