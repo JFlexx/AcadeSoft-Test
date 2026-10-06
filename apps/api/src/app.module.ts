@@ -26,6 +26,7 @@ import { RemindersModule } from './reminders/reminders.module';
 import { MessagesModule } from './messages/messages.module';
 import { ClassScheduleModule } from './class-schedule/class-schedule.module';
 import { HolidaysModule } from './holidays/holidays.module';
+import { TeacherAppModule } from './teacher-app/teacher-app.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { HolidaysModule } from './holidays/holidays.module';
     MessagesModule,
     ClassScheduleModule,
     HolidaysModule,
+    TeacherAppModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

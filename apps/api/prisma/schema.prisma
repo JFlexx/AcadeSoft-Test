@@ -148,6 +148,7 @@ model User {
   role          Role       @relation(fields: [roleId], references: [id])
   auditLogs     AuditLog[]
   guardianLinks Guardian[]
+  teacherProfile Teacher?
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -220,10 +221,13 @@ model Teacher {
   bio       String?
   photoUrl  String?
   isActive  Boolean  @default(true)
+  // Login of the teacher (role "teacher"), granted by an admin.
+  userId    String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   groups   Group[]
   sessions Session[]
 

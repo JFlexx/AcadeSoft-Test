@@ -13,6 +13,7 @@ import {
 import { TeachersService } from './teachers.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
+import { GrantTeacherAccessDto } from './dto/grant-teacher-access.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -52,5 +53,25 @@ export class TeachersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
     return this.teachersService.remove(tenantId, id);
+  }
+
+  @Get(':id/access')
+  getAccess(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
+    return this.teachersService.getAccess(tenantId, id);
+  }
+
+  @Post(':id/access')
+  grantAccess(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+    @Body() dto: GrantTeacherAccessDto,
+  ) {
+    return this.teachersService.grantAccess(tenantId, id, dto);
+  }
+
+  @Delete(':id/access')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  revokeAccess(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
+    return this.teachersService.revokeAccess(tenantId, id);
   }
 }
