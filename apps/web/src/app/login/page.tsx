@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { homeFor } from '@/lib/home';
 import { ApiError } from '@/lib/api';
 
 export default function LoginPage() {
@@ -17,7 +18,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && user)
-      router.replace(user.role === 'guardian' ? '/portal' : '/');
+      router.replace(homeFor(user.role));
   }, [isLoading, user, router]);
 
   async function handleSubmit(e: FormEvent) {
@@ -26,7 +27,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const u = await login({ tenantSlug, email, password });
-      router.replace(u.role === 'guardian' ? '/portal' : '/');
+      router.replace(homeFor(u.role));
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError('Credenciales inválidas');

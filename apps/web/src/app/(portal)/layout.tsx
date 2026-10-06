@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CircleUser, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { homeFor } from '@/lib/home';
 
 export default function PortalLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
     if (!user) router.replace('/login');
-    else if (user.role !== 'guardian') router.replace('/');
+    else if (user.role !== 'guardian') router.replace(homeFor(user.role));
   }, [isLoading, user, router]);
 
   if (isLoading || !user || user.role !== 'guardian') {

@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { homeFor, isAdminAppRole } from '@/lib/home';
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/', label: 'Inicio', icon: LayoutDashboard },
@@ -43,10 +44,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
     if (!user) router.replace('/login');
-    else if (user.role === 'guardian') router.replace('/portal');
+    else if (!isAdminAppRole(user.role)) router.replace(homeFor(user.role));
   }, [isLoading, user, router]);
 
-  if (isLoading || !user || user.role === 'guardian') {
+  if (isLoading || !user || !isAdminAppRole(user.role)) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <p className="text-sm text-gray-500">Cargando…</p>
