@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { Users2, CalendarDays } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { EmptyState } from '@/components/empty-state';
+import { TeacherAccessPanel } from '@/components/teacher-access-panel';
 
 type Teacher = {
   id: string;
@@ -180,6 +181,8 @@ export default function TeacherDetailPage() {
           )}
         </Card>
       </div>
+
+      <TeacherAccessPanel teacherId={teacher.id} defaultEmail={teacher.email} />
 
       <section className="mb-10">
         <h2 className="font-medium mb-3">Grupos que imparte</h2>
