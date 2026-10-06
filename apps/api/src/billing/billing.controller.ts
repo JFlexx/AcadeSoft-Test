@@ -1,4 +1,16 @@
-import { Body, Controller, Header, Post, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -9,6 +21,7 @@ import { GenerateMonthDto } from './dto/generate-month.dto';
 import { SepaRemittanceDto } from './dto/sepa-remittance.dto';
 import { ChargeGroupDto } from './dto/charge-group.dto';
 import { GroupChargeService } from './group-charge.service';
+import { RemittancesService } from './remittances.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
@@ -17,7 +30,43 @@ export class BillingController {
   constructor(
     private readonly billingService: BillingService,
     private readonly groupCharge: GroupChargeService,
+    private readonly remittances: RemittancesService,
   ) {}
+
+  @Get('remittances')
+  listRemittances(@CurrentUser('tenantId') tenantId: string) {
+    return this.remittances.list(tenantId);
+  }
+
+  @Get('remittances/:id')
+  remittance(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
+    return this.remittances.detail(tenantId, id);
+  }
+
+  /** Downloads the recorded XML again (does not create a new remittance). */
+  @Get('remittances/:id/xml')
+  @Header('Content-Type', 'application/xml')
+  async remittanceXml(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const { xml, filename } = await this.remittances.xml(tenantId, id);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(xml);
+  }
+
+  @Post('remittances/:id/collect')
+  @HttpCode(HttpStatus.OK)
+  collect(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
+    return this.remittances.collect(tenantId, id);
+  }
+
+  @Delete('remittances/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  voidRemittance(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
+    return this.remittances.void(tenantId, id);
+  }
 
   /** One-off concept for a whole group; dryRun previews it. */
   @Post('charge-group')

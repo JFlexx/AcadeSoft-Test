@@ -323,6 +323,12 @@ export class BillingService {
             mandateDate: true,
           },
         },
+        // A receipt still pending at the bank must not be sent twice.
+        remittanceItems: {
+          where: { status: 'SENT' },
+          select: { remittance: { select: { createdAt: true } } },
+          take: 1,
+        },
       },
       orderBy: { number: 'asc' },
     });
@@ -350,6 +356,18 @@ export class BillingService {
           number: inv.number,
           studentName,
           reason: 'Sin importe pendiente',
+        });
+        continue;
+      }
+      const inFlight = inv.remittanceItems[0];
+      if (inFlight) {
+        skipped.push({
+          invoiceId: inv.id,
+          number: inv.number,
+          studentName,
+          reason: `Ya está en la remesa del ${inFlight.remittance.createdAt.toLocaleDateString(
+            'es-ES',
+          )}, pendiente de cobro`,
         });
         continue;
       }
@@ -419,7 +437,7 @@ export class BillingService {
   async sepaXml(
     tenantId: string,
     dto: SepaRemittanceDto,
-  ): Promise<{ xml: string; filename: string }> {
+  ): Promise<{ xml: string; filename: string; remittanceId: string }> {
     const { creditor, included } = await this.collectSepaItems(tenantId, dto);
     if (included.length === 0) {
       throw new BadRequestException(
@@ -432,14 +450,37 @@ export class BillingService {
       new Date().toISOString().slice(0, 10);
     const period = `${dto.year}-${dto.month.toString().padStart(2, '0')}`;
 
+    const messageId = generateMessageId();
     const xml = buildSepaXml({
-      messageId: generateMessageId(),
+      messageId,
       creationDateTime: new Date(),
       collectionDate,
       creditor,
       transactions: included.map((i) => i.tx),
     });
 
-    return { xml, filename: `remesa-sepa-${period}.xml` };
+    // Recorded so the receipts can't be collected twice and their outcome
+    // (collected / returned) can be tracked. See RemittancesService.
+    const total = included.reduce((sum, i) => sum.add(i.amount), new Prisma.Decimal(0));
+    const remittance = await this.prisma.sepaRemittance.create({
+      data: {
+        tenantId,
+        messageId,
+        period,
+        collectionDate: new Date(collectionDate),
+        total,
+        itemCount: included.length,
+        xml,
+        items: {
+          create: included.map((i) => ({
+            invoiceId: i.invoiceId,
+            amount: new Prisma.Decimal(i.amount),
+          })),
+        },
+      },
+      select: { id: true },
+    });
+
+    return { xml, filename: `remesa-sepa-${period}.xml`, remittanceId: remittance.id };
   }
 }
