@@ -20,6 +20,7 @@ const SETTINGS_SELECT = {
   autoBillingDay: true,
   remindersEnabled: true,
   absenceNoticesEnabled: true,
+  trialClassesEnabled: true,
 } as const;
 
 @Injectable()
@@ -55,6 +56,7 @@ export class SettingsService {
         autoBillingDay: dto.autoBillingDay,
         remindersEnabled: dto.remindersEnabled,
         absenceNoticesEnabled: dto.absenceNoticesEnabled,
+        trialClassesEnabled: dto.trialClassesEnabled,
       },
       select: SETTINGS_SELECT,
     });

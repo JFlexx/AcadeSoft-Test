@@ -72,4 +72,8 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsBoolean()
   absenceNoticesEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  trialClassesEnabled?: boolean;
 }

@@ -52,6 +52,12 @@ enum AttendanceStatus {
   EXCUSED
 }
 
+enum TrialStatus {
+  BOOKED    // reserved; attendance tells whether they came
+  CONVERTED // enrolled afterwards
+  CANCELLED
+}
+
 enum InvoiceStatus {
   DRAFT
   PENDING
@@ -96,6 +102,8 @@ model Tenant {
   remindersEnabled   Boolean  @default(false)
   // Email the family when a student is marked absent (opt-in).
   absenceNoticesEnabled Boolean @default(false)
+  // Prospective families can book a free trial class online (opt-in).
+  trialClassesEnabled Boolean @default(false)
   // IANA zone the academy's class times are written in (Canarias: Atlantic/Canary).
   timezone           String   @default("Europe/Madrid")
   createdAt      DateTime     @default(now())
@@ -113,6 +121,7 @@ model Tenant {
   messages  Message[]
   scheduleSlots ScheduleSlot[]
   holidays  Holiday[]
+  trialClasses TrialClass[]
 
   @@map("tenants")
 }
@@ -185,6 +194,7 @@ model Student {
   enrollments Enrollment[]
   attendances Attendance[]
   invoices    Invoice[]
+  trialClasses TrialClass[]
 
   @@index([tenantId])
   @@index([tenantId, lastName, firstName])
@@ -322,6 +332,25 @@ model Holiday {
   @@map("holidays")
 }
 
+// A free trial class: a prospective student attends one real session of a
+// group before enrolling. Booked from the public page or by the admin.
+model TrialClass {
+  id        String      @id @default(cuid())
+  tenantId  String
+  sessionId String
+  studentId String
+  status    TrialStatus @default(BOOKED)
+  createdAt DateTime    @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@index([tenantId, createdAt])
+  @@map("trial_classes")
+}
+
 model Enrollment {
   id                 String           @id @default(cuid())
   studentId          String
@@ -368,6 +397,7 @@ model Session {
   teacher     Teacher?     @relation(fields: [teacherId], references: [id])
   cancelledByHoliday Holiday? @relation(fields: [cancelledByHolidayId], references: [id], onDelete: SetNull)
   attendances Attendance[]
+  trialClasses TrialClass[]
 
   @@index([tenantId, scheduledAt])
   @@index([groupId])
