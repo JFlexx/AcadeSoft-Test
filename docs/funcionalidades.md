@@ -51,7 +51,7 @@ Al entrar, en el menú lateral hay estas secciones:
 | **Mensajes** | Enviar un email a un grupo o a la familia de un alumno, con historial de lo enviado. |
 | **Facturas** | Todas las facturas, con su estado de cobro. Exportable a Excel. |
 | **Mensualidades** | Generar de golpe las facturas del mes y la remesa bancaria SEPA. |
-| **Ajustes** | Datos fiscales de la academia, contacto y configuración bancaria. |
+| **Ajustes** | Datos fiscales de la academia, contacto, configuración bancaria, avisos automáticos y días sin clase. |
 
 ---
 
@@ -68,6 +68,8 @@ Al entrar, en el menú lateral hay estas secciones:
 ### 2. Profesores
 - Alta, edición y baja.
 - **Ficha del profesor**: sus grupos y sus próximas clases.
+- **Acceso del profesor**: desde su ficha se le da un usuario y contraseña
+  (y se le puede quitar). Ver «App del profesor» más abajo.
 
 ### 3. Cursos y grupos
 - **Cursos**: la materia (con un color para identificarla visualmente).
@@ -81,13 +83,28 @@ Al entrar, en el menú lateral hay estas secciones:
   (por ejemplo, una beca puntual), sin cambiar la del resto.
 
 ### 5. Calendario y clases (sesiones)
-- **Agenda visual** de todas las clases, en vista **semanal** o **mensual**.
+- **Horario semanal del grupo**: se indica una vez (p. ej. «lunes y miércoles
+  a las 17:00, 60 minutos») y **el calendario de todo el curso se genera
+  solo**, con vista previa antes de crear nada y sin duplicar si se repite.
+  Respeta el cambio de hora de verano/invierno.
+- **Cambiar el horario a mitad de curso**: las clases futuras se pasan al nuevo
+  horario; las que ya tienen asistencia o se han impartido no se tocan.
+- **Días sin clase** (Ajustes): festivos y vacaciones. Con un botón se añaden
+  los **festivos nacionales** del curso; los autonómicos, locales y las
+  vacaciones se añaden a mano. Las clases de esos días se cancelan solas, y si
+  se quita el festivo vuelven al calendario.
+- **Agenda visual** de todas las clases, en vista **semanal** o **mensual**,
+  con su hora de inicio y fin y los días sin clase sombreados.
 - Filtros por grupo y por profesor; cada clase aparece con el color de su curso.
 - **Exportar a `.ics`**: se importa en Google Calendar / Apple Calendar.
 
 ### 6. Asistencia
 - En cada clase se puede **pasar lista**: presente, ausente, tarde o justificado,
-  con notas.
+  con notas — desde la administración o **el propio profesor desde el móvil**.
+- **Aviso de falta a la familia** (opcional, en Ajustes): cuando se marca una
+  falta, la familia recibe un email en el momento («Hoy Ana no ha asistido a
+  Inglés B1»). Uno por falta y solo para clases recientes; las respuestas
+  llegan al email de la academia.
 
 ### 7. Facturación
 - Facturas manuales (un cobro suelto) o automáticas (ver Mensualidades).
@@ -172,7 +189,14 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
 - **Exportar** alumnos y facturas a CSV, y el calendario a `.ics`
   (Google/Apple Calendar).
 
-### 18. Mensajes por email
+### 18. App del profesor
+- El profesor entra con su usuario y ve **sus clases de la semana** (también
+  las que cubre como sustituto), con la clase en curso resaltada.
+- **Pasa lista en segundos desde el móvil**: un toque por alumno (presente,
+  falta, tarde, justificada), «marcar el resto como presentes» y nota opcional.
+- No ve facturas, cobros ni datos de otras clases.
+
+### 19. Mensajes por email
 - Escribir un email a **un grupo entero** o a **la familia de un alumno**
   (clase cancelada, avisos generales…).
 - Antes de enviar se ve **a cuántas familias llegará** y qué alumnos no tienen
@@ -212,8 +236,9 @@ pagos). Para arrancarlo en un ordenador, ver
 Acceso a la demo:
 
 - Web: **http://localhost:3000**
-- Usuario: **admin@acme.local**
-- Contraseña: **ChangeMe123!**
+- Administración: **admin@acme.local** · **ChangeMe123!**
+- Profesor (app móvil): **laura@demo.local** · **Profe123!**
+- Familia (portal): **familia@demo.local** · **Familia123!**
 
 ---
 
