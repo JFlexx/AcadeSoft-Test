@@ -183,7 +183,6 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
   familia se **inscriba sola** desde la web, sin que nadie teclee sus datos.
 - Muestra los grupos con plaza; la solicitud llega como **inscripción
   pendiente** de aprobar (aparece en el panel de inicio).
-
 - **Lista de espera**: si un grupo está completo, la familia no se pierde: se
   apunta a la lista de espera y ve su puesto. En la ficha del grupo la academia
   ve la cola por orden de llegada, un aviso cuando hay plazas libres, y con un
