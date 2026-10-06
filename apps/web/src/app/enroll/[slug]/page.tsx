@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { CheckCircle2 } from 'lucide-react';
+import { TrialBookingForm } from '@/components/trial-booking-form';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -40,6 +41,8 @@ export default function EnrollPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [trialClasses, setTrialClasses] = useState(false);
+  const [mode, setMode] = useState<'enroll' | 'trial'>('enroll');
 
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
@@ -58,6 +61,7 @@ export default function EnrollPage() {
         const data = await res.json();
         setAcademy(data.academy);
         setGroups(data.groups);
+        setTrialClasses(!!data.trialClasses);
       } catch {
         setNotFound(true);
       } finally {
@@ -159,11 +163,35 @@ export default function EnrollPage() {
         </p>
         <h1 className="text-xl font-semibold">{academy}</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Rellena tus datos y elige un grupo. La academia confirmará tu plaza.
+          {mode === 'trial'
+            ? 'Ven a probar una clase gratis, sin compromiso.'
+            : 'Rellena tus datos y elige un grupo. La academia confirmará tu plaza.'}
         </p>
       </header>
 
-      {groups.length === 0 ? (
+      {trialClasses && (
+        <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-lg mb-5 text-sm font-medium">
+          {(
+            [
+              ['enroll', 'Inscribirme'],
+              ['trial', 'Probar una clase gratis'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setMode(value)}
+              className={`rounded-md py-2 ${mode === value ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {mode === 'trial' ? (
+        <TrialBookingForm slug={slug} academy={academy} groups={groups} />
+      ) : groups.length === 0 ? (
         <p className="text-sm text-gray-500">
           Ahora mismo no hay grupos abiertos para inscripción.
         </p>

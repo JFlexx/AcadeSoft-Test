@@ -22,6 +22,7 @@ type Settings = {
   autoBillingDay: number;
   remindersEnabled: boolean;
   absenceNoticesEnabled: boolean;
+  trialClassesEnabled: boolean;
   emailConfigured: boolean;
 };
 
@@ -74,6 +75,7 @@ export default function SettingsPage() {
   const [autoBillingDay, setAutoBillingDay] = useState(1);
   const [reminders, setReminders] = useState(false);
   const [absenceNotices, setAbsenceNotices] = useState(false);
+  const [trialClasses, setTrialClasses] = useState(false);
   const [emailConfigured, setEmailConfigured] = useState(false);
 
   function applyAuto(data: Settings) {
@@ -81,6 +83,7 @@ export default function SettingsPage() {
     setAutoBillingDay(data.autoBillingDay);
     setReminders(data.remindersEnabled);
     setAbsenceNotices(data.absenceNoticesEnabled);
+    setTrialClasses(data.trialClassesEnabled);
     setEmailConfigured(data.emailConfigured);
   }
 
@@ -127,6 +130,7 @@ export default function SettingsPage() {
           autoBillingDay,
           remindersEnabled: reminders,
           absenceNoticesEnabled: absenceNotices,
+          trialClassesEnabled: trialClasses,
         }),
       });
       setForm(toForm(updated));
@@ -325,6 +329,27 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-500">
             Se avisa a los tutores (o al alumno si no hay tutor) como mucho una
             vez cada 7 días y un máximo de 3 veces por factura. Desactivado por
+            defecto.
+          </p>
+        </section>
+
+        <section className="border-t pt-5 space-y-3">
+          <h2 className="font-medium">Clases de prueba</h2>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={trialClasses}
+              onChange={(e) => {
+                setTrialClasses(e.target.checked);
+                setSavedAt(null);
+              }}
+            />
+            Permitir reservar una clase de prueba gratis desde la página de inscripción
+          </label>
+          <p className="text-xs text-gray-500">
+            La familia elige uno de los próximos días de clase del grupo (desde 2 horas
+            hasta 30 días antes, máximo 3 pruebas por clase y solo en grupos con plazas) y
+            recibe la confirmación por email. Las ves en «Clases de prueba». Desactivado por
             defecto.
           </p>
         </section>

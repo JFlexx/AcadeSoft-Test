@@ -13,6 +13,7 @@ type Student = {
   id: string;
   firstName: string;
   lastName: string;
+  trial: boolean;
   attendance: { status: Status; notes: string | null } | null;
 };
 type Detail = {
@@ -187,6 +188,11 @@ export default function TakeAttendancePage() {
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="font-medium truncate">
                       {s.firstName} {s.lastName}
+                      {s.trial && (
+                        <span className="ml-2 text-xs font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                          Prueba
+                        </span>
+                      )}
                     </span>
                     <button
                       onClick={() => setOpenNotes((o) => ({ ...o, [s.id]: !o[s.id] }))}
