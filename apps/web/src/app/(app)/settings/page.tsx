@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
+import { HolidaysPanel } from '@/components/holidays-panel';
 
 type Settings = {
   id: string;
@@ -337,6 +338,10 @@ export default function SettingsPage() {
           )}
         </div>
       </form>
+
+      <section className="border-t pt-5 mt-8">
+        <HolidaysPanel />
+      </section>
     </div>
   );
 }

@@ -14,7 +14,9 @@ type Session = {
   teacherId: string | null;
   scheduledAt: string;
   status: SessionStatus;
+  durationMinutes: number | null;
 };
+type Holiday = { id: string; name: string; startDate: string; endDate: string };
 type Group = { id: string; name: string; courseId: string; teacherId: string | null };
 type Course = { id: string; name: string; color: string | null };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -22,6 +24,7 @@ type Teacher = { id: string; firstName: string; lastName: string };
 type ViewMode = 'week' | 'month';
 
 const DEFAULT_COLOR = '#6366f1';
+const DEFAULT_DURATION = 60;
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 // ─── date helpers (local time) ──────────────────────────────────────────────
@@ -56,6 +59,16 @@ function formatTime(iso: string): string {
   });
 }
 
+function sessionEnd(s: Session): Date {
+  return new Date(new Date(s.scheduledAt).getTime() + (s.durationMinutes ?? DEFAULT_DURATION) * 60_000);
+}
+
+/** Local calendar date as "YYYY-MM-DD" (holidays are stored that way). */
+function ymd(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 // ─── page ───────────────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
@@ -63,6 +76,7 @@ export default function CalendarPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [view, setView] = useState<ViewMode>('week');
@@ -74,12 +88,14 @@ export default function CalendarPage() {
     async function load() {
       setLoading(true);
       try {
-        const [s, g, c, t] = await Promise.all([
+        const [s, g, c, t, h] = await Promise.all([
           api<Session[]>('/sessions'),
           api<Group[]>('/groups'),
           api<Course[]>('/courses'),
           api<Teacher[]>('/teachers'),
+          api<Holiday[]>('/holidays'),
         ]);
+        setHolidays(h);
         setSessions(s);
         setGroups(g);
         setCourses(c);
@@ -103,6 +119,11 @@ export default function CalendarPage() {
     () => Object.fromEntries(teachers.map((t) => [t.id, t])),
     [teachers],
   );
+
+  function holidayFor(day: Date): string | null {
+    const d = ymd(day);
+    return holidays.find((h) => h.startDate <= d && d <= h.endDate)?.name ?? null;
+  }
 
   function colorFor(session: Session): string {
     const group = groupById[session.groupId];
@@ -152,7 +173,7 @@ export default function CalendarPage() {
   function handleExportIcs() {
     const events = filtered.map((s) => {
       const start = new Date(s.scheduledAt);
-      const end = new Date(start.getTime() + 60 * 60 * 1000); // 1h default
+      const end = sessionEnd(s);
       const teacher = teacherFor(s);
       return {
         uid: `${s.id}@acadesoft`,
@@ -257,6 +278,7 @@ export default function CalendarPage() {
           groupById={groupById}
           colorFor={colorFor}
           teacherFor={teacherFor}
+          holidayFor={holidayFor}
         />
       ) : (
         <MonthView
@@ -264,6 +286,7 @@ export default function CalendarPage() {
           byDay={byDay}
           groupById={groupById}
           colorFor={colorFor}
+          holidayFor={holidayFor}
         />
       )}
     </div>
@@ -278,12 +301,14 @@ function WeekView({
   groupById,
   colorFor,
   teacherFor,
+  holidayFor,
 }: {
   anchor: Date;
   byDay: Map<string, Session[]>;
   groupById: Record<string, Group>;
   colorFor: (s: Session) => string;
   teacherFor: (s: Session) => string | null;
+  holidayFor: (day: Date) => string | null;
 }) {
   const monday = startOfWeek(anchor);
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
@@ -294,8 +319,12 @@ function WeekView({
       {days.map((day, i) => {
         const list = byDay.get(dayKey(day)) ?? [];
         const isToday = isSameDay(day, today);
+        const holiday = holidayFor(day);
         return (
-          <div key={i} className="border rounded-lg bg-white min-h-[8rem] flex flex-col">
+          <div
+            key={i}
+            className={`border rounded-lg min-h-[8rem] flex flex-col ${holiday ? 'bg-amber-50' : 'bg-white'}`}
+          >
             <div
               className={`px-2 py-1.5 border-b text-xs font-medium flex items-center justify-between ${
                 isToday ? 'bg-brand-50 text-brand-700' : 'text-gray-600'
@@ -304,6 +333,11 @@ function WeekView({
               <span>{WEEKDAYS[i]}</span>
               <span className={isToday ? 'font-semibold' : ''}>{day.getDate()}</span>
             </div>
+            {holiday && (
+              <p className="px-2 pt-1 text-[11px] font-medium text-amber-700 truncate" title={holiday}>
+                {holiday}
+              </p>
+            )}
             <div className="p-1.5 space-y-1.5 flex-1">
               {list.length === 0 ? (
                 <p className="text-[11px] text-gray-300 px-1 py-2">—</p>
@@ -347,7 +381,8 @@ function SessionChip({
       style={{ borderLeft: `3px solid ${color}`, backgroundColor: `${color}1a` }}
     >
       <span className={`font-medium text-gray-800 ${cancelled ? 'line-through' : ''}`}>
-        {formatTime(session.scheduledAt)} · {groupName}
+        {formatTime(session.scheduledAt)}–{formatTime(sessionEnd(session).toISOString())} ·{' '}
+        {groupName}
       </span>
       {teacher && <span className="block text-gray-500 truncate">{teacher}</span>}
     </Link>
@@ -361,11 +396,13 @@ function MonthView({
   byDay,
   groupById,
   colorFor,
+  holidayFor,
 }: {
   anchor: Date;
   byDay: Map<string, Session[]>;
   groupById: Record<string, Group>;
   colorFor: (s: Session) => string;
+  holidayFor: (day: Date) => string | null;
 }) {
   const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const gridStart = startOfWeek(first);
@@ -387,12 +424,14 @@ function MonthView({
           const list = byDay.get(dayKey(day)) ?? [];
           const inMonth = day.getMonth() === currentMonth;
           const isToday = isSameDay(day, today);
+          const holiday = holidayFor(day);
           return (
             <div
               key={i}
               className={`min-h-[6rem] border-b border-r p-1 ${
-                inMonth ? '' : 'bg-gray-50/60'
+                holiday ? 'bg-amber-50' : inMonth ? '' : 'bg-gray-50/60'
               } ${i % 7 === 6 ? 'border-r-0' : ''}`}
+              title={holiday ?? undefined}
             >
               <div
                 className={`text-[11px] mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full ${
@@ -405,6 +444,9 @@ function MonthView({
               >
                 {day.getDate()}
               </div>
+              {holiday && (
+                <p className="text-[10px] font-medium text-amber-700 truncate px-1">{holiday}</p>
+              )}
               <div className="space-y-0.5">
                 {list.slice(0, 3).map((s) => (
                   <Link

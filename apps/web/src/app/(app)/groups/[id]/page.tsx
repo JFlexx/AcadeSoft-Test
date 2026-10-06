@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { EmptyState } from '@/components/empty-state';
+import { GroupSchedule } from '@/components/group-schedule';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -44,6 +45,8 @@ type Session = {
   endedAt: string | null;
   status: SessionStatus;
   notes: string | null;
+  durationMinutes: number | null;
+  cancelledByHolidayId: string | null;
 };
 
 const ENROLLMENT_STATUS_LABEL: Record<Enrollment['status'], string> = {
@@ -69,7 +72,10 @@ const EMPTY_SESSION_FORM = {
   scheduledAt: '',
   teacherId: '',
   notes: '',
+  durationMinutes: '60',
 };
+
+const DEFAULT_DURATION = 60;
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('es-ES', {
@@ -79,6 +85,17 @@ function formatDateTime(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function formatTime(d: Date): string {
+  return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+
+/** ISO instant → value for <input type="datetime-local"> in the browser's time. */
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export default function GroupDetailPage() {
@@ -106,6 +123,7 @@ export default function GroupDetailPage() {
   const [sessionForm, setSessionForm] = useState(EMPTY_SESSION_FORM);
   const [sessionSubmitting, setSessionSubmitting] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [showPastSessions, setShowPastSessions] = useState(false);
 
   // Per-enrollment fee override drafts (live editing state)
   const [feeDrafts, setFeeDrafts] = useState<Record<string, string>>({});
@@ -255,6 +273,7 @@ export default function GroupDetailPage() {
       scheduledAt: '',
       teacherId: group?.teacherId ?? '',
       notes: '',
+      durationMinutes: String(DEFAULT_DURATION),
     });
     setShowSessionForm(true);
     setSessionError(null);
@@ -263,9 +282,12 @@ export default function GroupDetailPage() {
   function startEditSession(s: Session) {
     setEditingSession(s);
     setSessionForm({
-      scheduledAt: s.scheduledAt.slice(0, 16),
+      // Local time: slicing the UTC ISO string showed (and saved) the class
+      // one or two hours off.
+      scheduledAt: toLocalInput(s.scheduledAt),
       teacherId: s.teacherId ?? '',
       notes: s.notes ?? '',
+      durationMinutes: String(s.durationMinutes ?? DEFAULT_DURATION),
     });
     setShowSessionForm(true);
     setSessionError(null);
@@ -285,6 +307,7 @@ export default function GroupDetailPage() {
     try {
       const payload: Record<string, unknown> = {
         scheduledAt: new Date(sessionForm.scheduledAt).toISOString(),
+        durationMinutes: Number(sessionForm.durationMinutes),
       };
       if (sessionForm.teacherId) payload.teacherId = sessionForm.teacherId;
       if (sessionForm.notes.trim()) payload.notes = sessionForm.notes.trim();
@@ -351,6 +374,14 @@ export default function GroupDetailPage() {
 
   const activeCount = enrollments.filter((e) => e.status === 'ACTIVE').length;
 
+  // A generated school year is ~80 classes: show what's ahead by default.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const pastSessions = sessions.filter((s) => new Date(s.scheduledAt) < startOfToday);
+  const visibleSessions = showPastSessions
+    ? sessions
+    : sessions.filter((s) => new Date(s.scheduledAt) >= startOfToday);
+
   return (
     <div className="p-6 max-w-4xl">
       <div className="mb-3">
@@ -401,6 +432,16 @@ export default function GroupDetailPage() {
         </span>
         <span className="text-gray-500">Estado</span>
         <span>{group.isActive ? 'Activo' : 'Inactivo'}</span>
+      </section>
+
+      <section className="mb-10">
+        <h2 className="font-medium mb-3">Horario semanal</h2>
+        <GroupSchedule
+          groupId={group.id}
+          groupStart={group.startDate}
+          groupEnd={group.endDate}
+          onGenerated={refresh}
+        />
       </section>
 
       <section>
@@ -623,6 +664,21 @@ export default function GroupDetailPage() {
                   ))}
                 </select>
               </label>
+              <label className="block">
+                <span className="text-xs text-gray-600 block mb-1">Duración (min) *</span>
+                <input
+                  type="number"
+                  required
+                  min={15}
+                  max={480}
+                  step={5}
+                  value={sessionForm.durationMinutes}
+                  onChange={(e) =>
+                    setSessionForm({ ...sessionForm, durationMinutes: e.target.value })
+                  }
+                  className="w-full border rounded px-2 py-1 text-sm"
+                />
+              </label>
               <label className="block col-span-2">
                 <span className="text-xs text-gray-600 block mb-1">Notas</span>
                 <textarea
@@ -657,11 +713,23 @@ export default function GroupDetailPage() {
           </form>
         )}
 
-        {sessions.length === 0 ? (
+        {pastSessions.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowPastSessions((v) => !v)}
+            className="text-sm text-gray-600 hover:underline mb-2"
+          >
+            {showPastSessions
+              ? 'Ocultar las pasadas'
+              : `Mostrar también las pasadas (${pastSessions.length})`}
+          </button>
+        )}
+
+        {visibleSessions.length === 0 ? (
           <EmptyState
             icon={CalendarClock}
-            title="Sin sesiones planificadas"
-            description="Crea sesiones para organizar las clases y registrar la asistencia de los alumnos."
+            title={sessions.length === 0 ? 'Sin sesiones planificadas' : 'Sin próximas sesiones'}
+            description="Define el horario semanal arriba para generar todas las clases del curso, o crea una sesión suelta."
             action={
               !showSessionForm && (
                 <button className="btn-primary" onClick={startCreateSession}>
@@ -682,14 +750,19 @@ export default function GroupDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {sessions.map((s) => {
+              {visibleSessions.map((s) => {
                 const t = s.teacherId ? teacherById[s.teacherId] : null;
+                const end = new Date(
+                  new Date(s.scheduledAt).getTime() +
+                    (s.durationMinutes ?? DEFAULT_DURATION) * 60_000,
+                );
                 return (
                   <tr key={s.id} className="border-b hover:bg-gray-50">
                     <td className="py-2">
                       <Link href={`/sessions/${s.id}`} className="hover:underline">
                         {formatDateTime(s.scheduledAt)}
                       </Link>
+                      <span className="text-gray-400"> – {formatTime(end)}</span>
                     </td>
                     <td className="py-2 text-gray-600">
                       {t ? `${t.firstName} ${t.lastName}` : '—'}
@@ -699,6 +772,7 @@ export default function GroupDetailPage() {
                         className={`text-xs px-2 py-0.5 rounded ${SESSION_STATUS_STYLE[s.status]}`}
                       >
                         {SESSION_STATUS_LABEL[s.status]}
+                        {s.cancelledByHolidayId && ' (día sin clase)'}
                       </span>
                     </td>
                     <td className="py-2 text-gray-600 max-w-xs truncate">{s.notes ?? '—'}</td>
