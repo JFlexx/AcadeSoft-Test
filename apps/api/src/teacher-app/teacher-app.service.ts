@@ -72,13 +72,19 @@ export class TeacherAppService {
             _count: { select: { enrollments: { where: { status: 'ACTIVE' } } } },
           },
         },
-        _count: { select: { attendances: true } },
+        _count: {
+          select: {
+            attendances: true,
+            trialClasses: { where: { status: { not: 'CANCELLED' } } },
+          },
+        },
       },
     });
     return rows.map(({ group: { _count: groupCount, ...group }, _count, ...s }) => ({
       ...s,
       group,
       enrolled: groupCount.enrollments,
+      trials: _count.trialClasses,
       marked: _count.attendances,
     }));
   }
@@ -143,17 +149,22 @@ export class TeacherAppService {
         notes: true,
         group: { select: GROUP_SELECT },
         attendances: { select: { studentId: true, status: true, notes: true } },
+        trialClasses: {
+          where: { status: { not: 'CANCELLED' } },
+          select: { studentId: true },
+        },
       },
     });
     if (!session) throw new NotFoundException();
 
     const marked = new Map(session.attendances.map((a) => [a.studentId, a]));
+    const trial = new Set(session.trialClasses.map((t) => t.studentId));
     const students = await this.prisma.student.findMany({
       where: {
         tenantId,
         OR: [
           { enrollments: { some: { groupId: session.groupId, status: 'ACTIVE' } } },
-          { id: { in: [...marked.keys()] } },
+          { id: { in: [...marked.keys(), ...trial] } },
         ],
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
@@ -169,7 +180,11 @@ export class TeacherAppService {
       group: session.group,
       students: students.map((s) => {
         const a = marked.get(s.id);
-        return { ...s, attendance: a ? { status: a.status, notes: a.notes } : null };
+        return {
+          ...s,
+          trial: trial.has(s.id),
+          attendance: a ? { status: a.status, notes: a.notes } : null,
+        };
       }),
     };
   }
