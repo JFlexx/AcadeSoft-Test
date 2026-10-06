@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GenerateSessionsDto } from './dto/generate-sessions.dto';
 import { PutScheduleDto } from './dto/put-schedule.dto';
-import { addDays, isoWeekday, todayIn, zonedToUtc } from './zoned-time';
+import { addDays, isoWeekday, todayIn, ymdOf, zonedToUtc } from './zoned-time';
 
 /** A school year plus margin; keeps one request from creating thousands of rows. */
 const MAX_RANGE_DAYS = 400;
@@ -17,6 +17,7 @@ type Plan = {
   toCreate: { scheduledAt: Date; durationMinutes: number }[];
   toReplace: string[];
   alreadyScheduled: number;
+  skippedHolidays: number;
 };
 
 @Injectable()
@@ -58,6 +59,7 @@ export class ClassScheduleService {
       create: plan.toCreate.length,
       replace: plan.toReplace.length,
       alreadyScheduled: plan.alreadyScheduled,
+      skippedHolidays: plan.skippedHolidays,
       firstDates: plan.toCreate.slice(0, 5).map((o) => o.scheduledAt.toISOString()),
     };
   }
@@ -93,6 +95,7 @@ export class ClassScheduleService {
         created: plan.toCreate.length,
         replaced: plan.toReplace.length,
         alreadyScheduled: plan.alreadyScheduled,
+        skippedHolidays: plan.skippedHolidays,
       };
     });
   }
@@ -131,11 +134,24 @@ export class ClassScheduleService {
       }
     }
 
+    // Days without classes (festivos, vacaciones) that overlap the range.
+    const holidays = await db.holiday.findMany({
+      where: { tenantId, startDate: { lte: new Date(to) }, endDate: { gte: new Date(from) } },
+      select: { startDate: true, endDate: true },
+    });
+    const isHoliday = (d: string) =>
+      holidays.some((h) => ymdOf(h.startDate) <= d && d <= ymdOf(h.endDate));
+
     const occurrences: Plan['toCreate'] = [];
+    let skippedHolidays = 0;
     for (let d = from; d <= to; d = addDays(d, 1)) {
       const weekday = isoWeekday(d);
       for (const slot of slots) {
         if (slot.weekday !== weekday) continue;
+        if (isHoliday(d)) {
+          skippedHolidays++;
+          continue;
+        }
         occurrences.push({
           scheduledAt: zonedToUtc(d, slot.startTime, tz),
           durationMinutes: slot.durationMinutes,
@@ -157,7 +173,8 @@ export class ClassScheduleService {
         scheduledAt: true,
         durationMinutes: true,
         status: true,
-        _count: { select: { attendances: true } } },
+        _count: { select: { attendances: true } },
+      },
     });
 
     // Only untouched future classes may be replaced: anything with
@@ -186,6 +203,7 @@ export class ClassScheduleService {
       toCreate,
       toReplace: [...replaceIds],
       alreadyScheduled: occurrences.length - toCreate.length,
+      skippedHolidays,
     };
   }
 
