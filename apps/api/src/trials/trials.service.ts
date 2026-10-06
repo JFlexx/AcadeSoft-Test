@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConvertTrialDto } from './dto/convert-trial.dto';
+import { chargeEnrollmentFee, feeSummary } from '../enrollments/enrollment-fee';
 
 /** Admin side of trial classes: who's coming, who came, and enrolling them. */
 @Injectable()
@@ -38,7 +39,9 @@ export class TrialsService {
             id: true,
             scheduledAt: true,
             status: true,
-            group: { select: { id: true, name: true, course: { select: { name: true } } } },
+            group: {
+              select: { id: true, name: true, enrollmentFee: true, course: { select: { name: true } } },
+            },
             attendances: { select: { studentId: true, status: true } },
           },
         },
@@ -65,19 +68,23 @@ export class TrialsService {
       throw new ConflictException('Ya está inscrito en este grupo');
     }
 
-    const enrollment = await this.prisma.$transaction(async (tx) => {
+    const status = dto.status ?? 'ACTIVE';
+    return this.prisma.$transaction(async (tx) => {
       const e = existing
         ? await tx.enrollment.update({
             where: { id: existing.id },
-            data: { status: dto.status ?? 'ACTIVE', enrolledAt: new Date() },
+            data: { status, enrolledAt: new Date() },
           })
         : await tx.enrollment.create({
-            data: { studentId: trial.studentId, groupId, status: dto.status ?? 'ACTIVE' },
+            data: { studentId: trial.studentId, groupId, status },
           });
       await tx.trialClass.update({ where: { id }, data: { status: 'CONVERTED' } });
-      return e;
+      const fee =
+        status === 'ACTIVE' && dto.chargeEnrollmentFee !== false
+          ? await chargeEnrollmentFee(tx, tenantId, e.id)
+          : null;
+      return { enrollment: e, enrollmentFeeInvoice: feeSummary(fee) };
     });
-    return { enrollment };
   }
 
   async cancel(tenantId: string, id: string) {

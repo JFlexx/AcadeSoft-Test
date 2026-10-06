@@ -24,6 +24,12 @@ export class GroupsService {
       maxCapacity: dto.maxCapacity,
       monthlyFee:
         dto.monthlyFee !== undefined ? new Prisma.Decimal(dto.monthlyFee) : undefined,
+      enrollmentFee:
+        dto.enrollmentFee === undefined
+          ? undefined
+          : dto.enrollmentFee === null
+            ? null
+            : new Prisma.Decimal(dto.enrollmentFee),
     };
     return this.prisma.group.create({ data });
   }
@@ -59,6 +65,12 @@ export class GroupsService {
       maxCapacity: dto.maxCapacity,
       monthlyFee:
         dto.monthlyFee !== undefined ? new Prisma.Decimal(dto.monthlyFee) : undefined,
+      enrollmentFee:
+        dto.enrollmentFee === undefined
+          ? undefined
+          : dto.enrollmentFee === null
+            ? null
+            : new Prisma.Decimal(dto.enrollmentFee),
       isActive: dto.isActive,
     };
     return this.prisma.group.update({ where: { id }, data });

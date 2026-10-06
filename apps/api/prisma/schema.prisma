@@ -279,6 +279,8 @@ model Group {
   endDate     DateTime?
   maxCapacity Int?
   monthlyFee  Decimal?  @db.Decimal(10, 2)
+  // One-off fee charged when a student joins (matrícula).
+  enrollmentFee Decimal? @db.Decimal(10, 2)
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

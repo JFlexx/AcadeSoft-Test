@@ -7,6 +7,7 @@ import { Users, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
+import { announceEnrollmentFee, askChargeEnrollmentFee } from '@/lib/enrollment-fee';
 import { EmptyState } from '@/components/empty-state';
 import { GroupSchedule } from '@/components/group-schedule';
 import { GroupWaitlist } from '@/components/group-waitlist';
@@ -22,6 +23,7 @@ type Group = {
   description: string | null;
   maxCapacity: number | null;
   monthlyFee: string | null;
+  enrollmentFee: string | null;
   startDate: string | null;
   endDate: string | null;
   isActive: boolean;
@@ -36,6 +38,7 @@ type Enrollment = {
   droppedAt: string | null;
   notes: string | null;
   monthlyFeeOverride: string | null;
+  enrollmentFeeInvoiced: boolean;
 };
 type SessionStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 type Session = {
@@ -187,13 +190,18 @@ export default function GroupDetailPage() {
     setEnrollSubmitting(true);
     setEnrollError(null);
     try {
-      await api('/enrollments', {
-        method: 'POST',
-        body: JSON.stringify({ studentId: enrollStudentId, groupId }),
-      });
+      const chargeEnrollmentFee = await askChargeEnrollmentFee(group?.enrollmentFee);
+      const res = await api<{ enrollmentFeeInvoice: { number: string; amount: string } | null }>(
+        '/enrollments',
+        {
+          method: 'POST',
+          body: JSON.stringify({ studentId: enrollStudentId, groupId, chargeEnrollmentFee }),
+        },
+      );
       setEnrollOpen(false);
       setEnrollStudentId('');
       toast.success('Alumno inscrito');
+      announceEnrollmentFee(res.enrollmentFeeInvoice);
       await refresh();
     } catch (err) {
       setEnrollError(err instanceof ApiError ? err.message : 'Error de red');
@@ -202,14 +210,18 @@ export default function GroupDetailPage() {
     }
   }
 
-  async function handleEnrollmentStatus(enrollmentId: string, status: Enrollment['status']) {
+  async function handleEnrollmentStatus(enrollment: Enrollment, status: Enrollment['status']) {
     try {
       const payload: Record<string, unknown> = { status };
       if (status === 'DROPPED') payload.droppedAt = new Date().toISOString();
-      await api(`/enrollments/${enrollmentId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      });
+      if (status === 'ACTIVE' && enrollment.status !== 'ACTIVE' && !enrollment.enrollmentFeeInvoiced) {
+        payload.chargeEnrollmentFee = await askChargeEnrollmentFee(group?.enrollmentFee);
+      }
+      const res = await api<{ enrollmentFeeInvoice: { number: string; amount: string } | null }>(
+        `/enrollments/${enrollment.id}`,
+        { method: 'PATCH', body: JSON.stringify(payload) },
+      );
+      announceEnrollmentFee(res.enrollmentFeeInvoice);
       await refresh();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Error de red');
@@ -437,6 +449,14 @@ export default function GroupDetailPage() {
               }).format(Number(group.monthlyFee))
             : 'Sin cuota'}
         </span>
+        <span className="text-gray-500">Matrícula</span>
+        <span>
+          {group.enrollmentFee
+            ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
+                Number(group.enrollmentFee),
+              )
+            : 'Sin matrícula'}
+        </span>
         <span className="text-gray-500">Estado</span>
         <span>{group.isActive ? 'Activo' : 'Inactivo'}</span>
       </section>
@@ -555,7 +575,7 @@ export default function GroupDetailPage() {
                       <select
                         value={e.status}
                         onChange={(ev) =>
-                          handleEnrollmentStatus(e.id, ev.target.value as Enrollment['status'])
+                          handleEnrollmentStatus(e, ev.target.value as Enrollment['status'])
                         }
                         className="border rounded px-1 py-0.5 text-xs bg-white"
                       >
@@ -629,6 +649,7 @@ export default function GroupDetailPage() {
           <h2 className="font-medium mb-3">Lista de espera ({waitlist.length})</h2>
           <GroupWaitlist
             entries={waitlist}
+            enrollmentFee={group.enrollmentFee}
             studentById={studentById}
             freeSpots={freeSpots}
             onChange={refresh}

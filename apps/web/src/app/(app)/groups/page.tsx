@@ -18,6 +18,7 @@ type Group = {
   description: string | null;
   maxCapacity: number | null;
   monthlyFee: string | null;
+  enrollmentFee: string | null;
   startDate: string | null;
   endDate: string | null;
   isActive: boolean;
@@ -30,6 +31,7 @@ const EMPTY_FORM = {
   description: '',
   maxCapacity: '',
   monthlyFee: '',
+  enrollmentFee: '',
   startDate: '',
   endDate: '',
 };
@@ -95,6 +97,7 @@ export default function GroupsPage() {
       description: g.description ?? '',
       maxCapacity: g.maxCapacity?.toString() ?? '',
       monthlyFee: g.monthlyFee ?? '',
+      enrollmentFee: g.enrollmentFee ?? '',
       startDate: g.startDate ? g.startDate.slice(0, 10) : '',
       endDate: g.endDate ? g.endDate.slice(0, 10) : '',
     });
@@ -124,6 +127,8 @@ export default function GroupsPage() {
       if (form.description.trim()) payload.description = form.description.trim();
       if (form.maxCapacity) payload.maxCapacity = Number(form.maxCapacity);
       if (form.monthlyFee) payload.monthlyFee = Number(form.monthlyFee);
+      if (form.enrollmentFee) payload.enrollmentFee = Number(form.enrollmentFee);
+      else if (editing?.enrollmentFee) payload.enrollmentFee = null;
       if (form.startDate) payload.startDate = new Date(form.startDate).toISOString();
       if (form.endDate) payload.endDate = new Date(form.endDate).toISOString();
 
@@ -250,6 +255,17 @@ export default function GroupsPage() {
                 value={form.monthlyFee}
                 onChange={(e) => setForm({ ...form, monthlyFee: e.target.value })}
                 placeholder="0.00"
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+            </Field>
+            <Field label="Matrícula (€, una vez)">
+              <input
+                type="number"
+                step="0.01"
+                min={0}
+                value={form.enrollmentFee}
+                onChange={(e) => setForm({ ...form, enrollmentFee: e.target.value })}
+                placeholder="Sin matrícula"
                 className="w-full border rounded px-2 py-1 text-sm"
               />
             </Field>

@@ -1,5 +1,6 @@
 import { EnrollmentStatus } from '@prisma/client';
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsNumber,
@@ -27,4 +28,9 @@ export class UpdateEnrollmentDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   monthlyFeeOverride?: number | null;
+
+  /** When the enrollment becomes active, also invoice the group's matrícula (default true). */
+  @IsOptional()
+  @IsBoolean()
+  chargeEnrollmentFee?: boolean;
 }

@@ -51,6 +51,12 @@ export class UpdateGroupDto {
   @Min(0)
   monthlyFee?: number;
 
+  /** Matrícula; null clears it. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  enrollmentFee?: number | null;
+
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

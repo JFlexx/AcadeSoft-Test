@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { familyEmails } from '../email/family-emails';
 import { spotOfferHtml, spotOfferSubject } from './spot-offer-email';
+import { chargeEnrollmentFee, ENROLLMENT_FEE_PERIOD, feeSummary } from './enrollment-fee';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 import { UpdateEnrollmentDto } from './dto/update-enrollment.dto';
 import { FindEnrollmentsDto } from './dto/find-enrollments.dto';
@@ -25,27 +26,31 @@ export class EnrollmentsService {
     await this.ensureGroupInTenant(tenantId, dto.groupId);
 
     try {
-      return await this.prisma.enrollment.create({
-        data: {
-          studentId: dto.studentId,
-          groupId: dto.groupId,
-          status: dto.status,
-          notes: dto.notes,
-        },
+      return await this.prisma.$transaction(async (tx) => {
+        const enrollment = await tx.enrollment.create({
+          data: {
+            studentId: dto.studentId,
+            groupId: dto.groupId,
+            status: dto.status,
+            notes: dto.notes,
+          },
+        });
+        const fee =
+          enrollment.status === 'ACTIVE' && dto.chargeEnrollmentFee !== false
+            ? await chargeEnrollmentFee(tx, tenantId, enrollment.id)
+            : null;
+        return { ...enrollment, enrollmentFeeInvoice: feeSummary(fee) };
       });
     } catch (err) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException('Student already enrolled in this group');
       }
       throw err;
     }
   }
 
-  findAll(tenantId: string, query: FindEnrollmentsDto) {
-    return this.prisma.enrollment.findMany({
+  async findAll(tenantId: string, query: FindEnrollmentsDto) {
+    const rows = await this.prisma.enrollment.findMany({
       where: {
         student: { tenantId },
         ...(query.studentId && { studentId: query.studentId }),
@@ -53,7 +58,12 @@ export class EnrollmentsService {
         ...(query.status && { status: query.status }),
       },
       orderBy: { enrolledAt: 'desc' },
+      include: {
+        invoices: { where: { billingPeriod: ENROLLMENT_FEE_PERIOD }, select: { id: true } },
+      },
     });
+    // Lets the UI know whether activating would invoice the matrícula.
+    return rows.map(({ invoices, ...e }) => ({ ...e, enrollmentFeeInvoiced: invoices.length > 0 }));
   }
 
   async findOne(tenantId: string, id: string) {
@@ -70,21 +80,46 @@ export class EnrollmentsService {
     // the spot (while waiting, enrolledAt is their place in the queue).
     const leavesWaitlist =
       current.status === 'WAITLIST' && dto.status !== undefined && dto.status !== 'WAITLIST';
-    return this.prisma.enrollment.update({
+    const becomesActive = dto.status === 'ACTIVE' && current.status !== 'ACTIVE';
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.enrollment.update({
+        where: { id },
+        data: {
+          ...(leavesWaitlist && { enrolledAt: new Date() }),
+          status: dto.status,
+          droppedAt: dto.droppedAt ? new Date(dto.droppedAt) : undefined,
+          notes: dto.notes,
+          monthlyFeeOverride:
+            dto.monthlyFeeOverride === undefined
+              ? undefined
+              : dto.monthlyFeeOverride === null
+                ? null
+                : new Prisma.Decimal(dto.monthlyFeeOverride),
+        },
+      });
+      const fee =
+        becomesActive && dto.chargeEnrollmentFee !== false
+          ? await chargeEnrollmentFee(tx, tenantId, id)
+          : null;
+      return { ...updated, enrollmentFeeInvoice: feeSummary(fee) };
+    });
+  }
+
+  /** Invoices the matrícula later, e.g. if it was skipped when activating. */
+  async chargeFee(tenantId: string, id: string) {
+    await this.findOne(tenantId, id);
+    const invoice = await this.prisma.$transaction((tx) => chargeEnrollmentFee(tx, tenantId, id));
+    if (invoice) return { enrollmentFeeInvoice: feeSummary(invoice) };
+
+    const e = await this.prisma.enrollment.findUniqueOrThrow({
       where: { id },
-      data: {
-        ...(leavesWaitlist && { enrolledAt: new Date() }),
-        status: dto.status,
-        droppedAt: dto.droppedAt ? new Date(dto.droppedAt) : undefined,
-        notes: dto.notes,
-        monthlyFeeOverride:
-          dto.monthlyFeeOverride === undefined
-            ? undefined
-            : dto.monthlyFeeOverride === null
-              ? null
-              : new Prisma.Decimal(dto.monthlyFeeOverride),
+      select: {
+        group: { select: { enrollmentFee: true } },
+        invoices: { where: { billingPeriod: ENROLLMENT_FEE_PERIOD }, select: { id: true } },
       },
     });
+    if (e.invoices.length > 0) throw new ConflictException('La matrícula ya está facturada');
+    throw new BadRequestException('Este grupo no tiene matrícula');
   }
 
   /**
@@ -120,7 +155,9 @@ export class EnrollmentsService {
     }
     const to = familyEmails(enrollment.student);
     if (to.length === 0) {
-      throw new BadRequestException('Ni el alumno ni su familia tienen email: avísales por teléfono');
+      throw new BadRequestException(
+        'Ni el alumno ni su familia tienen email: avísales por teléfono',
+      );
     }
 
     const { student, group } = enrollment;

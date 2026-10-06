@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
+import { announceEnrollmentFee, askChargeEnrollmentFee } from '@/lib/enrollment-fee';
 
 type WaitlistEntry = {
   id: string;
@@ -27,9 +28,11 @@ export function GroupWaitlist({
   entries,
   studentById,
   freeSpots,
+  enrollmentFee,
   onChange,
 }: {
   entries: WaitlistEntry[];
+  enrollmentFee: string | null;
   studentById: Record<string, Student>;
   /** null when the group has no capacity limit. */
   freeSpots: number | null;
@@ -64,13 +67,15 @@ export function GroupWaitlist({
       });
       if (!ok) return;
     }
+    const chargeEnrollmentFee = await askChargeEnrollmentFee(enrollmentFee);
     setBusy(e.id);
     try {
-      await api(`/enrollments/${e.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'ACTIVE' }),
-      });
+      const res = await api<{ enrollmentFeeInvoice: { number: string; amount: string } | null }>(
+        `/enrollments/${e.id}`,
+        { method: 'PATCH', body: JSON.stringify({ status: 'ACTIVE', chargeEnrollmentFee }) },
+      );
       toast.success(`${nameOf(e)} ya está inscrito`);
+      announceEnrollmentFee(res.enrollmentFeeInvoice);
       onChange();
     } catch (err) {
       toast.error(errorMessage(err));
