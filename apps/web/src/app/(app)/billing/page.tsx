@@ -15,6 +15,7 @@ type GenerationItem = {
   amount: string | null;
   status: GenerationStatus;
   invoiceId: string | null;
+  note?: string | null;
 };
 
 type GenerationResponse = {
@@ -323,7 +324,10 @@ export default function BillingPage() {
                 <tbody>
                   {response.results.map((r) => (
                     <tr key={r.enrollmentId} className="border-b">
-                      <td className="py-2">{r.studentName}</td>
+                      <td className="py-2">
+                        {r.studentName}
+                        {r.note && <span className="block text-xs text-gray-500">{r.note}</span>}
+                      </td>
                       <td className="py-2 text-gray-600">{r.groupName}</td>
                       <td className="py-2 text-right">{formatEur(r.amount)}</td>
                       <td className="py-2">

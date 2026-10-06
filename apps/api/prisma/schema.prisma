@@ -104,6 +104,8 @@ model Tenant {
   absenceNoticesEnabled Boolean @default(false)
   // Prospective families can book a free trial class online (opt-in).
   trialClassesEnabled Boolean @default(false)
+  // First monthly fee of a mid-month enrollment covers only the classes left.
+  prorateNewEnrollments Boolean @default(false)
   // IANA zone the academy's class times are written in (Canarias: Atlantic/Canary).
   timezone           String   @default("Europe/Madrid")
   createdAt      DateTime     @default(now())

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { createChainedInvoice } from '../invoices/invoice-hash';
+import { todayIn, zonedToUtc } from '../class-schedule/zoned-time';
 import { GenerateMonthDto } from './dto/generate-month.dto';
 import { SepaRemittanceDto } from './dto/sepa-remittance.dto';
 import {
@@ -34,6 +35,8 @@ type GenerationItem = {
   amount: string | null;
   status: GenerationStatus;
   invoiceId: string | null;
+  /** Discount / proration explanation, also stored in the invoice notes. */
+  note?: string | null;
 };
 
 @Injectable()
@@ -44,6 +47,20 @@ export class BillingService {
     const period = `${dto.year}-${dto.month.toString().padStart(2, '0')}`;
     const issueDate = new Date(Date.UTC(dto.year, dto.month - 1, 1, 12, 0, 0));
     const dueDate = new Date(Date.UTC(dto.year, dto.month, 0, 12, 0, 0));
+
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { prorateNewEnrollments: true, timezone: true },
+    });
+    const tz = tenant.timezone;
+    const mm = dto.month.toString().padStart(2, '0');
+    const monthStart = zonedToUtc(`${dto.year}-${mm}-01`, '00:00', tz);
+    const next =
+      dto.month === 12
+        ? `${dto.year + 1}-01-01`
+        : `${dto.year}-${(dto.month + 1).toString().padStart(2, '0')}-01`;
+    const monthEnd = zonedToUtc(next, '00:00', tz);
+    const daysInMonth = new Date(Date.UTC(dto.year, dto.month, 0)).getUTCDate();
 
     const enrollments = await this.prisma.enrollment.findMany({
       where: { status: 'ACTIVE', student: { tenantId } },
@@ -80,6 +97,50 @@ export class BillingService {
         .map((e) => [e.enrollmentId, e.id]),
     );
 
+    // Classes of each group this month, for proration of mid-month joiners.
+    const sessionsByGroup = new Map<string, Date[]>();
+    if (tenant.prorateNewEnrollments) {
+      const sessions = await this.prisma.session.findMany({
+        where: {
+          groupId: { in: [...new Set(enrollments.map((e) => e.groupId))] },
+          status: { not: 'CANCELLED' },
+          scheduledAt: { gte: monthStart, lt: monthEnd },
+        },
+        select: { groupId: true, scheduledAt: true },
+      });
+      for (const s of sessions) {
+        sessionsByGroup.set(s.groupId, [...(sessionsByGroup.get(s.groupId) ?? []), s.scheduledAt]);
+      }
+    }
+
+    /**
+     * Share of the month a mid-month joiner pays: the classes left from the
+     * day they joined (holiday-cancelled ones don't count), or the days left
+     * if the group has no classes on the calendar.
+     */
+    const proration = (e: { groupId: string; enrolledAt: Date }) => {
+      if (!tenant.prorateNewEnrollments) return null;
+      if (e.enrolledAt < monthStart || e.enrolledAt >= monthEnd) return null;
+      const joined = todayIn(tz, e.enrolledAt);
+      const day = Number(joined.slice(8, 10));
+      if (day === 1) return null;
+      const from = zonedToUtc(joined, '00:00', tz);
+      const label = `alta el ${joined.slice(8, 10)}/${joined.slice(5, 7)}`;
+      const classes = sessionsByGroup.get(e.groupId) ?? [];
+      if (classes.length > 0) {
+        const left = classes.filter((t) => t >= from).length;
+        return {
+          factor: new Prisma.Decimal(left).div(classes.length),
+          note: `Prorrateo: ${left} de ${classes.length} clases del mes (${label})`,
+        };
+      }
+      const left = daysInMonth - day + 1;
+      return {
+        factor: new Prisma.Decimal(left).div(daysInMonth),
+        note: `Prorrateo: ${left} de ${daysInMonth} días del mes (${label})`,
+      };
+    };
+
     const results: GenerationItem[] = [];
 
     for (const e of enrollments) {
@@ -103,14 +164,36 @@ export class BillingService {
       // group/override fee), rounded to cents.
       const pct = e.student.discountPercent;
       const hasDiscount = pct != null && pct.gt(0);
-      const fee = hasDiscount
+      const discounted = hasDiscount
         ? baseFee
             .mul(new Prisma.Decimal(1).minus(pct.div(100)))
             .toDecimalPlaces(2)
         : baseFee;
-      const discountNote = hasDiscount
-        ? `Descuento ${pct.toString()}% sobre cuota base ${baseFee.toFixed(2)} €`
-        : null;
+      const prorate = proration(e);
+      const fee = prorate ? discounted.mul(prorate.factor).toDecimalPlaces(2) : discounted;
+      const discountNote =
+        [
+          hasDiscount
+            ? `Descuento ${pct.toString()}% sobre cuota base ${baseFee.toFixed(2)} €`
+            : null,
+          prorate?.note ?? null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || null;
+
+      if (fee.lte(0)) {
+        // Joined after the month's last class: nothing to charge this month.
+        results.push({
+          enrollmentId: e.id,
+          studentName,
+          groupName,
+          amount: null,
+          status: 'NO_FEE',
+          invoiceId: null,
+          note: discountNote,
+        });
+        continue;
+      }
 
       const existingId = existingByEnrollment.get(e.id);
       if (existingId) {
@@ -121,6 +204,7 @@ export class BillingService {
           amount: fee.toString(),
           status: 'SKIPPED',
           invoiceId: existingId,
+          note: discountNote,
         });
         continue;
       }
@@ -133,6 +217,7 @@ export class BillingService {
           amount: fee.toString(),
           status: 'WOULD_CREATE',
           invoiceId: null,
+          note: discountNote,
         });
         continue;
       }
@@ -157,6 +242,7 @@ export class BillingService {
         amount: fee.toString(),
         status: 'CREATED',
         invoiceId: invoice.id,
+        note: discountNote,
       });
     }
 

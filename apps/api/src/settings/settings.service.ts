@@ -21,6 +21,7 @@ const SETTINGS_SELECT = {
   remindersEnabled: true,
   absenceNoticesEnabled: true,
   trialClassesEnabled: true,
+  prorateNewEnrollments: true,
 } as const;
 
 @Injectable()
@@ -57,6 +58,7 @@ export class SettingsService {
         remindersEnabled: dto.remindersEnabled,
         absenceNoticesEnabled: dto.absenceNoticesEnabled,
         trialClassesEnabled: dto.trialClassesEnabled,
+        prorateNewEnrollments: dto.prorateNewEnrollments,
       },
       select: SETTINGS_SELECT,
     });

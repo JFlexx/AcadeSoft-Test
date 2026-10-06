@@ -76,4 +76,8 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsBoolean()
   trialClassesEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  prorateNewEnrollments?: boolean;
 }
