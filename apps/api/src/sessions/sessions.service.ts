@@ -18,6 +18,7 @@ export class SessionsService {
       groupId: dto.groupId,
       teacherId: dto.teacherId,
       scheduledAt: new Date(dto.scheduledAt),
+      durationMinutes: dto.durationMinutes,
       status: dto.status,
       notes: dto.notes,
     };
@@ -57,6 +58,7 @@ export class SessionsService {
     const data: Prisma.SessionUncheckedUpdateInput = {
       teacherId: dto.teacherId,
       scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : undefined,
+      durationMinutes: dto.durationMinutes,
       startedAt: dto.startedAt ? new Date(dto.startedAt) : undefined,
       endedAt: dto.endedAt ? new Date(dto.endedAt) : undefined,
       status: dto.status,

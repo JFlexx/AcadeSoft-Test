@@ -2,10 +2,13 @@ import { SessionStatus } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class CreateSessionDto {
@@ -19,6 +22,12 @@ export class CreateSessionDto {
 
   @IsDateString()
   scheduledAt!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(15)
+  @Max(480)
+  durationMinutes?: number;
 
   @IsOptional()
   @IsEnum(SessionStatus)
