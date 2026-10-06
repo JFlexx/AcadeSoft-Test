@@ -31,7 +31,7 @@ type Session = {
 type Enrollment = {
   id: string;
   studentId: string;
-  status: 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'DROPPED';
+  status: 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'DROPPED' | 'WAITLIST';
 };
 type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
 type Attendance = {

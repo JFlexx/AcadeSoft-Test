@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { familyEmails } from '../email/family-emails';
 import { absenceHtml, absenceSubject } from './absence-email';
 
 const HOUR_MS = 3_600_000;
@@ -111,17 +112,4 @@ export class AbsenceNoticesService {
     }
     return sent;
   }
-}
-
-/** The guardians' emails, or the student's own if no guardian has one. */
-function familyEmails(student: { email: string | null; guardians: { email: string | null }[] }) {
-  const guardians = [
-    ...new Set(
-      student.guardians
-        .map((g) => g.email?.trim().toLowerCase())
-        .filter((e): e is string => !!e),
-    ),
-  ];
-  if (guardians.length > 0) return guardians;
-  return student.email ? [student.email.trim().toLowerCase()] : [];
 }

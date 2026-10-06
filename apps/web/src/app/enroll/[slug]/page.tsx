@@ -44,7 +44,8 @@ export default function EnrollPage() {
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  // null until sent; the waiting-list position when the group was full.
+  const [done, setDone] = useState<{ waitlisted: boolean; position?: number } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -70,11 +71,13 @@ export default function EnrollPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const payload: Record<string, string> = {
+      const chosen = groups.find((g) => g.id === form.groupId);
+      const payload: Record<string, string | boolean> = {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         groupId: form.groupId,
       };
+      if (chosen?.spotsAvailable === 0) payload.waitlist = true;
       if (form.email.trim()) payload.email = form.email.trim();
       if (form.phone.trim()) payload.phone = form.phone.trim();
       if (form.guardianName.trim()) payload.guardianName = form.guardianName.trim();
@@ -93,7 +96,8 @@ export default function EnrollPage() {
             'No se pudo enviar la solicitud',
         );
       }
-      setDone(true);
+      const body = await res.json();
+      setDone({ waitlisted: !!body.waitlisted, position: body.position });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error de red');
     } finally {
@@ -124,14 +128,28 @@ export default function EnrollPage() {
       <Shell>
         <div className="text-center py-6">
           <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-3" />
-          <h1 className="text-xl font-semibold">¡Solicitud enviada!</h1>
-          <p className="text-sm text-gray-600 mt-2">
-            {academy} revisará tu inscripción y se pondrá en contacto contigo.
-          </p>
+          {done.waitlisted ? (
+            <>
+              <h1 className="text-xl font-semibold">¡Estás en la lista de espera!</h1>
+              <p className="text-sm text-gray-600 mt-2">
+                {done.position ? `Ocupas el puesto ${done.position}. ` : ''}
+                Si queda una plaza libre, {academy} te avisará por email.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-xl font-semibold">¡Solicitud enviada!</h1>
+              <p className="text-sm text-gray-600 mt-2">
+                {academy} revisará tu inscripción y se pondrá en contacto contigo.
+              </p>
+            </>
+          )}
         </div>
       </Shell>
     );
   }
+
+  const chosenFull = groups.find((g) => g.id === form.groupId)?.spotsAvailable === 0;
 
   return (
     <Shell>
@@ -159,15 +177,14 @@ export default function EnrollPage() {
                 return (
                   <label
                     key={g.id}
-                    className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer ${
-                      full ? 'opacity-50 cursor-not-allowed' : 'hover:border-brand-300'
-                    } ${form.groupId === g.id ? 'border-brand-500 bg-brand-50' : ''}`}
+                    className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer hover:border-brand-300 ${
+                      form.groupId === g.id ? 'border-brand-500 bg-brand-50' : ''
+                    }`}
                   >
                     <input
                       type="radio"
                       name="group"
                       value={g.id}
-                      disabled={full}
                       checked={form.groupId === g.id}
                       onChange={() => setForm({ ...form, groupId: g.id })}
                       required
@@ -178,7 +195,7 @@ export default function EnrollPage() {
                         {g.course}
                         {g.monthlyFee ? ` · ${formatEur(g.monthlyFee)}/mes` : ''}
                         {g.spotsAvailable != null &&
-                          ` · ${full ? 'completo' : `${g.spotsAvailable} plazas`}`}
+                          ` · ${full ? 'completo, lista de espera' : `${g.spotsAvailable} plazas`}`}
                       </span>
                     </span>
                   </label>
@@ -216,8 +233,19 @@ export default function EnrollPage() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
+          {chosenFull && (
+            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Este grupo está completo. Te apuntaremos a la lista de espera y te avisaremos
+              si queda una plaza libre.
+            </p>
+          )}
+
           <button type="submit" disabled={submitting} className="btn-primary w-full">
-            {submitting ? 'Enviando…' : 'Enviar solicitud'}
+            {submitting
+              ? 'Enviando…'
+              : chosenFull
+                ? 'Apuntarme a la lista de espera'
+                : 'Enviar solicitud'}
           </button>
         </form>
       )}

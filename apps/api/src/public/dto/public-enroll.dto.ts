@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -53,4 +54,9 @@ export class PublicEnrollDto {
   @IsString()
   @MaxLength(1000)
   notes?: string;
+
+  /** If the group is full, join its waiting list instead of failing. */
+  @IsOptional()
+  @IsBoolean()
+  waitlist?: boolean;
 }

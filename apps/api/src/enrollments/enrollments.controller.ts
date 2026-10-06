@@ -53,6 +53,13 @@ export class EnrollmentsController {
     return this.enrollmentsService.update(tenantId, id, dto);
   }
 
+  /** Waiting list: email the family that a spot is free. */
+  @Post(':id/offer-spot')
+  @HttpCode(HttpStatus.OK)
+  offerSpot(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
+    return this.enrollmentsService.offerSpot(tenantId, id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
