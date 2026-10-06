@@ -109,6 +109,7 @@ model Tenant {
   auditLogs AuditLog[]
   messages  Message[]
   scheduleSlots ScheduleSlot[]
+  holidays  Holiday[]
 
   @@map("tenants")
 }
@@ -297,6 +298,23 @@ model ScheduleSlot {
   @@map("schedule_slots")
 }
 
+// A day or period without classes (festivo, vacaciones), in academy-local
+// calendar dates, both inclusive.
+model Holiday {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cancelledSessions Session[]
+
+  @@index([tenantId, startDate])
+  @@map("holidays")
+}
+
 model Enrollment {
   id                 String           @id @default(cuid())
   studentId          String
@@ -329,6 +347,9 @@ model Session {
   status      SessionStatus @default(SCHEDULED)
   // null = 60 minutes (sessions created before durations existed)
   durationMinutes Int?
+  // Set when a holiday cancelled this class, so removing the holiday can
+  // put it back on the calendar.
+  cancelledByHolidayId String?
   notes       String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -336,6 +357,7 @@ model Session {
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
   teacher     Teacher?     @relation(fields: [teacherId], references: [id])
+  cancelledByHoliday Holiday? @relation(fields: [cancelledByHolidayId], references: [id], onDelete: SetNull)
   attendances Attendance[]
 
   @@index([tenantId, scheduledAt])

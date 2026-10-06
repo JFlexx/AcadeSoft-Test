@@ -57,6 +57,9 @@ export function addDays(ymd: string, days: number): string {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
+/** "YYYY-MM-DD" of a @db.Date column (stored as UTC midnight). */
+export const ymdOf = (d: Date) => d.toISOString().slice(0, 10);
+
 /** ISO weekday of a calendar date: 1 = lunes … 7 = domingo. */
 export function isoWeekday(ymd: string): number {
   const [y, m, d] = ymd.split('-').map(Number);
