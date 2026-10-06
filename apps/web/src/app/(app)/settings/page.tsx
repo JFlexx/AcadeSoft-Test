@@ -21,6 +21,7 @@ type Settings = {
   autoBillingEnabled: boolean;
   autoBillingDay: number;
   remindersEnabled: boolean;
+  absenceNoticesEnabled: boolean;
   emailConfigured: boolean;
 };
 
@@ -72,12 +73,14 @@ export default function SettingsPage() {
   const [autoBilling, setAutoBilling] = useState(false);
   const [autoBillingDay, setAutoBillingDay] = useState(1);
   const [reminders, setReminders] = useState(false);
+  const [absenceNotices, setAbsenceNotices] = useState(false);
   const [emailConfigured, setEmailConfigured] = useState(false);
 
   function applyAuto(data: Settings) {
     setAutoBilling(data.autoBillingEnabled);
     setAutoBillingDay(data.autoBillingDay);
     setReminders(data.remindersEnabled);
+    setAbsenceNotices(data.absenceNoticesEnabled);
     setEmailConfigured(data.emailConfigured);
   }
 
@@ -123,6 +126,7 @@ export default function SettingsPage() {
           autoBillingEnabled: autoBilling,
           autoBillingDay,
           remindersEnabled: reminders,
+          absenceNoticesEnabled: absenceNotices,
         }),
       });
       setForm(toForm(updated));
@@ -322,6 +326,33 @@ export default function SettingsPage() {
             Se avisa a los tutores (o al alumno si no hay tutor) como mucho una
             vez cada 7 días y un máximo de 3 veces por factura. Desactivado por
             defecto.
+          </p>
+        </section>
+
+        <section className="border-t pt-5 space-y-3">
+          <h2 className="font-medium">Avisos de falta de asistencia</h2>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={absenceNotices}
+              onChange={(e) => {
+                setAbsenceNotices(e.target.checked);
+                setSavedAt(null);
+              }}
+            />
+            Enviar un email a la familia cuando se marque una falta
+          </label>
+          {absenceNotices && !emailConfigured && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              El envío de email aún no está configurado: los avisos no saldrán
+              hasta que se añada la clave de Resend en el servidor.
+            </p>
+          )}
+          <p className="text-xs text-gray-500">
+            Al pasar lista (el profesor desde el móvil o desde aquí), la familia
+            recibe el aviso en el momento: uno por falta y solo para clases de las
+            últimas 24 horas. Las respuestas llegan al email de contacto de la
+            academia. Desactivado por defecto.
           </p>
         </section>
 

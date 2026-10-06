@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AbsenceNoticesService } from '../absence-notices/absence-notices.service';
 import { BulkUpsertAttendanceDto } from '../attendance/dto/bulk-upsert-attendance.dto';
 import { addDays, todayIn, zonedToUtc } from '../class-schedule/zoned-time';
 import { FindTeacherSessionsDto } from './dto/find-teacher-sessions.dto';
@@ -26,7 +27,10 @@ const GROUP_SELECT = {
  */
 @Injectable()
 export class TeacherAppService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly absences: AbsenceNoticesService,
+  ) {}
 
   async me(tenantId: string, userId: string) {
     const teacher = await this.teacher(tenantId, userId);
@@ -119,7 +123,11 @@ export class TeacherAppService {
         }),
       ),
     );
-    return this.detail(tenantId, teacher.id, sessionId);
+    const noticesSent = await this.absences.notify(
+      sessionId,
+      dto.items.filter((i) => i.status === 'ABSENT').map((i) => i.studentId),
+    );
+    return { ...(await this.detail(tenantId, teacher.id, sessionId)), noticesSent };
   }
 
   /** The session with its roster: active students, plus anyone already marked. */
