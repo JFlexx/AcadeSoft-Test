@@ -77,6 +77,18 @@ enum PaymentMethod {
   CARD
   TRANSFER
   OTHER
+  DIRECT_DEBIT // domiciliación SEPA
+}
+
+enum RemittanceStatus {
+  SENT      // XML generated and (presumably) uploaded to the bank
+  COLLECTED // the bank paid it: payments registered
+}
+
+enum RemittanceItemStatus {
+  SENT
+  COLLECTED
+  RETURNED // devuelto por el banco
 }
 
 // ─── Tenant ───────────────────────────────────────────────────────────────────
@@ -124,6 +136,7 @@ model Tenant {
   scheduleSlots ScheduleSlot[]
   holidays  Holiday[]
   trialClasses TrialClass[]
+  sepaRemittances SepaRemittance[]
 
   @@map("tenants")
 }
@@ -456,6 +469,7 @@ model Invoice {
   student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   enrollment  Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
   payments    Payment[]
+  remittanceItems SepaRemittanceItem[]
   rectifies   Invoice?    @relation("InvoiceRectification", fields: [rectifiesId], references: [id], onDelete: SetNull)
   rectifiedBy Invoice[]   @relation("InvoiceRectification")
 
@@ -481,10 +495,54 @@ model Payment {
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  remittanceItems SepaRemittanceItem[]
 
   @@index([tenantId])
   @@index([invoiceId])
   @@map("payments")
+}
+
+// A SEPA direct-debit file sent to the bank. Recorded when the XML is
+// downloaded, so an invoice can't be collected twice and its outcome
+// (collected / returned) can be tracked per receipt.
+model SepaRemittance {
+  id             String           @id @default(cuid())
+  tenantId       String
+  messageId      String           @unique
+  period         String           // "YYYY-MM" the invoices were selected from
+  collectionDate DateTime         @db.Date
+  total          Decimal          @db.Decimal(10, 2)
+  itemCount      Int
+  status         RemittanceStatus @default(SENT)
+  collectedAt    DateTime?
+  xml            String           // as sent, to download it again
+  createdAt      DateTime         @default(now())
+
+  tenant Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  SepaRemittanceItem[]
+
+  @@index([tenantId, createdAt])
+  @@map("sepa_remittances")
+}
+
+model SepaRemittanceItem {
+  id           String               @id @default(cuid())
+  remittanceId String
+  invoiceId    String
+  amount       Decimal              @db.Decimal(10, 2)
+  status       RemittanceItemStatus @default(SENT)
+  paymentId    String?              // registered when the remittance is collected
+  returnReason String?
+  returnedAt   DateTime?
+  createdAt    DateTime             @default(now())
+
+  remittance SepaRemittance @relation(fields: [remittanceId], references: [id], onDelete: Cascade)
+  invoice    Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  payment    Payment?       @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([remittanceId])
+  @@index([invoiceId])
+  @@map("sepa_remittance_items")
 }
 
 // ─── AuditLog ─────────────────────────────────────────────────────────────────

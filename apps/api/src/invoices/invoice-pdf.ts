@@ -58,6 +58,7 @@ const METHOD_LABEL: Record<PaymentMethod, string> = {
   CARD: 'Tarjeta',
   TRANSFER: 'Transferencia',
   OTHER: 'Otro',
+  DIRECT_DEBIT: 'Domiciliación',
 };
 
 function eur(value: Prisma.Decimal | number | string): string {
