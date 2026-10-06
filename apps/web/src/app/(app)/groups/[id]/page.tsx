@@ -11,6 +11,7 @@ import { announceEnrollmentFee, askChargeEnrollmentFee } from '@/lib/enrollment-
 import { EmptyState } from '@/components/empty-state';
 import { GroupSchedule } from '@/components/group-schedule';
 import { GroupWaitlist } from '@/components/group-waitlist';
+import { ChargeGroupPanel } from '@/components/charge-group-panel';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -130,6 +131,7 @@ export default function GroupDetailPage() {
   const [sessionSubmitting, setSessionSubmitting] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [showPastSessions, setShowPastSessions] = useState(false);
+  const [chargeOpen, setChargeOpen] = useState(false);
 
   // Per-enrollment fee override drafts (live editing state)
   const [feeDrafts, setFeeDrafts] = useState<Record<string, string>>({});
@@ -412,14 +414,21 @@ export default function GroupDetailPage() {
       <header className="mb-6">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h1 className="text-xl font-semibold">{group.name}</h1>
-          <Link href={`/messages?groupId=${group.id}`} className="btn-secondary">
-            Enviar mensaje al grupo
-          </Link>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setChargeOpen((v) => !v)} className="btn-secondary">
+              Cobrar un concepto
+            </button>
+            <Link href={`/messages?groupId=${group.id}`} className="btn-secondary">
+              Enviar mensaje al grupo
+            </Link>
+          </div>
         </div>
         {group.description && (
           <p className="text-sm text-gray-600 mt-1">{group.description}</p>
         )}
       </header>
+
+      {chargeOpen && <ChargeGroupPanel groupId={group.id} onClose={() => setChargeOpen(false)} />}
 
       <section className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-8 max-w-md">
         <span className="text-gray-500">Curso</span>
