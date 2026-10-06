@@ -109,6 +109,11 @@ Al entrar, en el menú lateral hay estas secciones:
 
 ### 7. Facturación
 - Facturas manuales (un cobro suelto) o automáticas (ver Mensualidades).
+- **Matrícula**: cada grupo puede tener una matrícula (pago único). Al dar de
+  alta a un alumno la app pregunta si facturarla; nunca se cobra dos veces.
+- **Cobrar un concepto a todo un grupo** (libros, material, una excursión):
+  con vista previa del total, una factura por alumno y sin riesgo de cobrar
+  dos veces por un doble clic.
 - **Numeración correlativa por academia** (ej. `F-2026-0001`), como exige la ley.
 - **PDF descargable** de cada factura, con los datos fiscales de la academia.
 
@@ -132,6 +137,9 @@ Al entrar, en el menú lateral hay estas secciones:
 - **Vista previa** antes de generar, y es **idempotente**: si se vuelve a
   lanzar, no duplica las que ya existen.
 - Aplica automáticamente los descuentos de familia.
+- **Prorrateo** (opcional, en Ajustes): quien empieza a mitad de mes paga solo
+  las clases que le quedan según el calendario (o los días, si no hay clases
+  programadas). La factura lo explica: «Prorrateo: 5 de 8 clases del mes».
 - **Opcional: en automático**. En Ajustes se puede activar que las
   mensualidades se generen solas cada mes, el día elegido (1–28).
 
