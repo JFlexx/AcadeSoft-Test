@@ -53,6 +53,12 @@ export class EnrollmentsController {
     return this.enrollmentsService.update(tenantId, id, dto);
   }
 
+  /** Invoice the group's matrícula for this enrollment (once). */
+  @Post(':id/enrollment-fee')
+  chargeFee(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
+    return this.enrollmentsService.chargeFee(tenantId, id);
+  }
+
   /** Waiting list: email the family that a spot is free. */
   @Post(':id/offer-spot')
   @HttpCode(HttpStatus.OK)

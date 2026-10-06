@@ -1,5 +1,6 @@
 import { EnrollmentStatus } from '@prisma/client';
 import {
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -24,4 +25,9 @@ export class CreateEnrollmentDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  /** When the enrollment becomes active, also invoice the group's matrícula (default true). */
+  @IsOptional()
+  @IsBoolean()
+  chargeEnrollmentFee?: boolean;
 }

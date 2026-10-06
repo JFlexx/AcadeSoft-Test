@@ -6,6 +6,7 @@ import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
+import { announceEnrollmentFee, askChargeEnrollmentFee } from '@/lib/enrollment-fee';
 import { EmptyState } from '@/components/empty-state';
 
 type Attendance = 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null;
@@ -27,7 +28,7 @@ type Trial = {
     id: string;
     scheduledAt: string;
     status: string;
-    group: { id: string; name: string; course: { name: string } };
+    group: { id: string; name: string; enrollmentFee: string | null; course: { name: string } };
   };
 };
 
@@ -71,9 +72,15 @@ export default function TrialsPage() {
   }, []);
 
   async function convert(t: Trial, status: 'ACTIVE' | 'WAITLIST') {
+    const chargeEnrollmentFee =
+      status === 'ACTIVE' && (await askChargeEnrollmentFee(t.session.group.enrollmentFee));
     setBusy(t.id);
     try {
-      await api(`/trials/${t.id}/convert`, { method: 'POST', body: JSON.stringify({ status }) });
+      const res = await api<{ enrollmentFeeInvoice: { number: string; amount: string } | null }>(
+        `/trials/${t.id}/convert`,
+        { method: 'POST', body: JSON.stringify({ status, chargeEnrollmentFee }) },
+      );
+      announceEnrollmentFee(res.enrollmentFeeInvoice);
       toast.success(
         status === 'ACTIVE'
           ? `${t.student.firstName} inscrito en ${t.session.group.name}`
