@@ -93,6 +93,8 @@ model Tenant {
   autoBillingEnabled Boolean  @default(false)
   autoBillingDay     Int      @default(1)
   remindersEnabled   Boolean  @default(false)
+  // Email the family when a student is marked absent (opt-in).
+  absenceNoticesEnabled Boolean @default(false)
   // IANA zone the academy's class times are written in (Canarias: Atlantic/Canary).
   timezone           String   @default("Europe/Madrid")
   createdAt      DateTime     @default(now())
@@ -376,6 +378,8 @@ model Attendance {
   status    AttendanceStatus @default(PRESENT)
   notes     String?
   markedAt  DateTime         @default(now())
+  // When the family was emailed about this absence (at most once).
+  absenceNotifiedAt DateTime?
 
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)

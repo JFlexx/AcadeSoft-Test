@@ -23,6 +23,8 @@ type Detail = {
   notes: string | null;
   group: { id: string; name: string; course: { name: string; color: string | null } };
   students: Student[];
+  /** Only in the save response: families emailed about new absences. */
+  noticesSent?: number;
 };
 type Mark = { status: Status | null; notes: string };
 
@@ -103,13 +105,17 @@ export default function TakeAttendancePage() {
     if (items.length === 0) return;
     setSaving(true);
     try {
-      load(
-        await api<Detail>(`/teacher/sessions/${id}/attendance`, {
-          method: 'PUT',
-          body: JSON.stringify({ items }),
-        }),
+      const res = await api<Detail>(`/teacher/sessions/${id}/attendance`, {
+        method: 'PUT',
+        body: JSON.stringify({ items }),
+      });
+      load(res);
+      const n = res.noticesSent ?? 0;
+      toast.success(
+        n > 0
+          ? `Asistencia guardada · ${n} ${n === 1 ? 'familia avisada' : 'familias avisadas'} de la falta`
+          : 'Asistencia guardada',
       );
-      toast.success('Asistencia guardada');
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {

@@ -1,11 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AbsenceNoticesService } from '../absence-notices/absence-notices.service';
 import { BulkUpsertAttendanceDto } from './dto/bulk-upsert-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly absences: AbsenceNoticesService,
+  ) {}
 
   async bulkUpsert(tenantId: string, sessionId: string, dto: BulkUpsertAttendanceDto) {
     await this.ensureSessionInTenant(tenantId, sessionId);
@@ -24,7 +28,7 @@ export class AttendanceService {
       throw new BadRequestException('One or more students not found in tenant');
     }
 
-    return this.prisma.$transaction(
+    const saved = await this.prisma.$transaction(
       dto.items.map((item) =>
         this.prisma.attendance.upsert({
           where: { sessionId_studentId: { sessionId, studentId: item.studentId } },
@@ -38,6 +42,11 @@ export class AttendanceService {
         }),
       ),
     );
+    await this.absences.notify(
+      sessionId,
+      dto.items.filter((i) => i.status === 'ABSENT').map((i) => i.studentId),
+    );
+    return saved;
   }
 
   async findAll(tenantId: string, sessionId: string) {
@@ -60,10 +69,12 @@ export class AttendanceService {
     });
     if (!existing) throw new NotFoundException();
 
-    return this.prisma.attendance.update({
+    const updated = await this.prisma.attendance.update({
       where: { sessionId_studentId: { sessionId, studentId } },
       data: { status: dto.status, notes: dto.notes },
     });
+    if (updated.status === 'ABSENT') await this.absences.notify(sessionId, [studentId]);
+    return updated;
   }
 
   async remove(tenantId: string, sessionId: string, studentId: string): Promise<void> {

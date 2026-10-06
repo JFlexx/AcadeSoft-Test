@@ -68,4 +68,8 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsBoolean()
   remindersEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  absenceNoticesEnabled?: boolean;
 }
