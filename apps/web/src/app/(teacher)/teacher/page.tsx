@@ -13,6 +13,7 @@ type TeacherSession = {
   status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
   group: { id: string; name: string; course: { name: string; color: string | null } };
   enrolled: number;
+  trials: number;
   marked: number;
 };
 
@@ -121,7 +122,7 @@ export default function TeacherHomePage() {
                 const end = new Date(start.getTime() + (s.durationMinutes ?? 60) * 60_000);
                 const live = start.getTime() <= now && now < end.getTime();
                 const cancelled = s.status === 'CANCELLED';
-                const done = s.enrolled > 0 && s.marked >= s.enrolled;
+                const done = s.enrolled + s.trials > 0 && s.marked >= s.enrolled + s.trials;
                 return (
                   <li key={s.id}>
                     <Link
@@ -141,6 +142,9 @@ export default function TeacherHomePage() {
                         </p>
                         <p className="text-xs text-gray-500 truncate">
                           {s.group.course.name} · {s.enrolled} alumnos
+                          {s.trials > 0 && (
+                            <span className="text-amber-700"> · {s.trials} de prueba</span>
+                          )}
                           {live && <span className="text-brand-700 font-medium"> · Ahora</span>}
                         </p>
                       </div>
@@ -153,7 +157,7 @@ export default function TeacherHomePage() {
                       ) : (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-700">
                           <ClipboardList className="h-4 w-4" />
-                          {s.marked > 0 ? `${s.marked}/${s.enrolled}` : 'Pasar lista'}
+                          {s.marked > 0 ? `${s.marked}/${s.enrolled + s.trials}` : 'Pasar lista'}
                         </span>
                       )}
                     </Link>
