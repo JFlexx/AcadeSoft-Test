@@ -49,6 +49,7 @@ Al entrar, en el menú lateral hay estas secciones:
 | **Grupos** | Las clases concretas dentro de un curso, con su cuota mensual, aforo y profesor. |
 | **Calendario** | Agenda de clases en vista semanal o mensual. Exportable a Google/Apple Calendar. |
 | **Mensajes** | Enviar un email a un grupo o a la familia de un alumno, con historial de lo enviado. |
+| **Clases de prueba** | Quién viene a probar, quién vino y a quién inscribir. |
 | **Facturas** | Todas las facturas, con su estado de cobro. Exportable a Excel. |
 | **Mensualidades** | Generar de golpe las facturas del mes y la remesa bancaria SEPA. |
 | **Ajustes** | Datos fiscales de la academia, contacto, configuración bancaria, avisos automáticos y días sin clase. |
@@ -177,11 +178,21 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
 - La academia **da y quita** el acceso desde la ficha del alumno; un mismo
   acceso puede cubrir a **varios hermanos**.
 
-### 16. Inscripción online (self-service)
+### 16. Inscripción online, lista de espera y clase de prueba
 - La academia comparte un **enlace público** (desde Ajustes) para que una
   familia se **inscriba sola** desde la web, sin que nadie teclee sus datos.
 - Muestra los grupos con plaza; la solicitud llega como **inscripción
   pendiente** de aprobar (aparece en el panel de inicio).
+- **Lista de espera**: si un grupo está completo, la familia no se pierde: se
+  apunta a la lista de espera y ve su puesto. En la ficha del grupo la academia
+  ve la cola por orden de llegada, un aviso cuando hay plazas libres, y con un
+  botón **ofrece la plaza por email** al siguiente y se la da.
+- **Clase de prueba gratis** (opcional, en Ajustes): desde la misma página la
+  familia elige uno de los próximos días de clase del grupo y reserva una
+  prueba; recibe la confirmación por email con día, hora y dirección. El
+  profesor ve al alumno marcado como «Prueba» en su lista, y en «Clases de
+  prueba» la academia ve quién vino y lo **inscribe con un clic** (o lo pasa a la
+  lista de espera).
 
 ### 17. Importar y exportar datos
 - **Importar alumnos desde un CSV/Excel** (con mapeo de columnas y vista
