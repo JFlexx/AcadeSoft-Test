@@ -76,10 +76,12 @@ export class EnrollmentsService {
 
   async update(tenantId: string, id: string, dto: UpdateEnrollmentDto) {
     const current = await this.findOne(tenantId, id);
-    // Leaving the waiting list: the enrollment date becomes the day they got
-    // the spot (while waiting, enrolledAt is their place in the queue).
+    // Leaving the waiting list, or a request being approved: the enrollment
+    // date becomes that day (before, enrolledAt is the queue/request date),
+    // which is what proration of the first monthly fee is based on.
     const leavesWaitlist =
-      current.status === 'WAITLIST' && dto.status !== undefined && dto.status !== 'WAITLIST';
+      (current.status === 'WAITLIST' && dto.status !== undefined && dto.status !== 'WAITLIST') ||
+      (current.status === 'PENDING' && dto.status === 'ACTIVE');
     const becomesActive = dto.status === 'ACTIVE' && current.status !== 'ACTIVE';
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.enrollment.update({

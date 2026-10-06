@@ -23,6 +23,7 @@ type Settings = {
   remindersEnabled: boolean;
   absenceNoticesEnabled: boolean;
   trialClassesEnabled: boolean;
+  prorateNewEnrollments: boolean;
   emailConfigured: boolean;
 };
 
@@ -76,6 +77,7 @@ export default function SettingsPage() {
   const [reminders, setReminders] = useState(false);
   const [absenceNotices, setAbsenceNotices] = useState(false);
   const [trialClasses, setTrialClasses] = useState(false);
+  const [prorate, setProrate] = useState(false);
   const [emailConfigured, setEmailConfigured] = useState(false);
 
   function applyAuto(data: Settings) {
@@ -84,6 +86,7 @@ export default function SettingsPage() {
     setReminders(data.remindersEnabled);
     setAbsenceNotices(data.absenceNoticesEnabled);
     setTrialClasses(data.trialClassesEnabled);
+    setProrate(data.prorateNewEnrollments);
     setEmailConfigured(data.emailConfigured);
   }
 
@@ -131,6 +134,7 @@ export default function SettingsPage() {
           remindersEnabled: reminders,
           absenceNoticesEnabled: absenceNotices,
           trialClassesEnabled: trialClasses,
+          prorateNewEnrollments: prorate,
         }),
       });
       setForm(toForm(updated));
@@ -304,6 +308,27 @@ export default function SettingsPage() {
             Cada mes, el día elegido, se crean las facturas de las inscripciones
             activas con cuota (igual que el botón «Generar mensualidades», sin
             duplicar las que ya existan). Desactivado por defecto.
+          </p>
+        </section>
+
+        <section className="border-t pt-5 space-y-3">
+          <h2 className="font-medium">Prorrateo de la primera cuota</h2>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={prorate}
+              onChange={(e) => {
+                setProrate(e.target.checked);
+                setSavedAt(null);
+              }}
+            />
+            Si alguien empieza a mitad de mes, cobrar solo la parte que le toca
+          </label>
+          <p className="text-xs text-gray-500">
+            Se calcula con las clases que quedan en el calendario desde el día de alta (las
+            canceladas por festivo no cuentan), o por días si el grupo no tiene clases
+            programadas. La factura explica el cálculo, p. ej. «Prorrateo: 5 de 8 clases del
+            mes». Desactivado por defecto.
           </p>
         </section>
 
