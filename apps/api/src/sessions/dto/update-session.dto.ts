@@ -2,9 +2,12 @@ import { SessionStatus } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class UpdateSessionDto {
@@ -23,6 +26,12 @@ export class UpdateSessionDto {
   @IsOptional()
   @IsDateString()
   endedAt?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(15)
+  @Max(480)
+  durationMinutes?: number;
 
   @IsOptional()
   @IsEnum(SessionStatus)

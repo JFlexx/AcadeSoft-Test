@@ -24,6 +24,7 @@ import { StripeModule } from './stripe/stripe.module';
 import { EmailModule } from './email/email.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { MessagesModule } from './messages/messages.module';
+import { ClassScheduleModule } from './class-schedule/class-schedule.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { MessagesModule } from './messages/messages.module';
     EmailModule,
     RemindersModule,
     MessagesModule,
+    ClassScheduleModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
