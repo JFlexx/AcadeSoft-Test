@@ -9,6 +9,7 @@ import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { EmptyState } from '@/components/empty-state';
 import { GroupSchedule } from '@/components/group-schedule';
+import { GroupWaitlist } from '@/components/group-waitlist';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -29,8 +30,9 @@ type Enrollment = {
   id: string;
   studentId: string;
   groupId: string;
-  status: 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'DROPPED';
+  status: 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'DROPPED' | 'WAITLIST';
   enrolledAt: string;
+  spotOfferedAt: string | null;
   droppedAt: string | null;
   notes: string | null;
   monthlyFeeOverride: string | null;
@@ -54,6 +56,7 @@ const ENROLLMENT_STATUS_LABEL: Record<Enrollment['status'], string> = {
   PENDING: 'Pendiente',
   COMPLETED: 'Completado',
   DROPPED: 'Baja',
+  WAITLIST: 'Lista de espera',
 };
 
 const SESSION_STATUS_STYLE: Record<SessionStatus, string> = {
@@ -373,6 +376,10 @@ export default function GroupDetailPage() {
   if (!group) return null;
 
   const activeCount = enrollments.filter((e) => e.status === 'ACTIVE').length;
+  const waitlist = enrollments.filter((e) => e.status === 'WAITLIST');
+  const enrolled = enrollments.filter((e) => e.status !== 'WAITLIST');
+  const freeSpots =
+    group.maxCapacity == null ? null : Math.max(0, group.maxCapacity - activeCount);
 
   // A generated school year is ~80 classes: show what's ahead by default.
   const startOfToday = new Date();
@@ -502,7 +509,7 @@ export default function GroupDetailPage() {
           </div>
         )}
 
-        {enrollments.length === 0 ? (
+        {enrolled.length === 0 ? (
           <EmptyState
             icon={Users}
             title="Sin alumnos inscritos"
@@ -538,7 +545,7 @@ export default function GroupDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {enrollments.map((e) => {
+              {enrolled.map((e) => {
                 const s = studentById[e.studentId];
                 const fullName = s ? `${s.firstName} ${s.lastName}` : '(alumno desconocido)';
                 return (
@@ -616,6 +623,18 @@ export default function GroupDetailPage() {
           </table>
         )}
       </section>
+
+      {waitlist.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-medium mb-3">Lista de espera ({waitlist.length})</h2>
+          <GroupWaitlist
+            entries={waitlist}
+            studentById={studentById}
+            freeSpots={freeSpots}
+            onChange={refresh}
+          />
+        </section>
+      )}
 
       <section className="mt-10">
         <header className="flex items-center justify-between mb-3">

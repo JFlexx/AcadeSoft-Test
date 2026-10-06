@@ -25,7 +25,7 @@ type Student = {
   isActive: boolean;
 };
 
-type EnrollmentStatus = 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'DROPPED';
+type EnrollmentStatus = 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'DROPPED' | 'WAITLIST';
 type Enrollment = {
   id: string;
   studentId: string;
@@ -65,6 +65,7 @@ const ENROLLMENT_STATUS_LABEL: Record<EnrollmentStatus, string> = {
   PENDING: 'Pendiente',
   COMPLETED: 'Completado',
   DROPPED: 'Baja',
+  WAITLIST: 'Lista de espera',
 };
 
 const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {

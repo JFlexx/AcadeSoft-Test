@@ -6,13 +6,19 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+import { familyEmails } from '../email/family-emails';
+import { spotOfferHtml, spotOfferSubject } from './spot-offer-email';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 import { UpdateEnrollmentDto } from './dto/update-enrollment.dto';
 import { FindEnrollmentsDto } from './dto/find-enrollments.dto';
 
 @Injectable()
 export class EnrollmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly email: EmailService,
+  ) {}
 
   async create(tenantId: string, dto: CreateEnrollmentDto) {
     await this.ensureStudentInTenant(tenantId, dto.studentId);
@@ -59,10 +65,15 @@ export class EnrollmentsService {
   }
 
   async update(tenantId: string, id: string, dto: UpdateEnrollmentDto) {
-    await this.findOne(tenantId, id);
+    const current = await this.findOne(tenantId, id);
+    // Leaving the waiting list: the enrollment date becomes the day they got
+    // the spot (while waiting, enrolledAt is their place in the queue).
+    const leavesWaitlist =
+      current.status === 'WAITLIST' && dto.status !== undefined && dto.status !== 'WAITLIST';
     return this.prisma.enrollment.update({
       where: { id },
       data: {
+        ...(leavesWaitlist && { enrolledAt: new Date() }),
         status: dto.status,
         droppedAt: dto.droppedAt ? new Date(dto.droppedAt) : undefined,
         notes: dto.notes,
@@ -73,6 +84,63 @@ export class EnrollmentsService {
               ? null
               : new Prisma.Decimal(dto.monthlyFeeOverride),
       },
+    });
+  }
+
+  /**
+   * Waiting list: emails the family that a spot is free so they can claim
+   * it. The admin then moves the enrollment to ACTIVE (or gives the spot to
+   * the next one). Can be repeated; the latest offer date is kept.
+   */
+  async offerSpot(tenantId: string, id: string) {
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { id, student: { tenantId } },
+      select: {
+        status: true,
+        student: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            guardians: { select: { email: true } },
+            tenant: {
+              select: { name: true, legalName: true, contactEmail: true, contactPhone: true },
+            },
+          },
+        },
+        group: { select: { name: true, course: { select: { name: true } } } },
+      },
+    });
+    if (!enrollment) throw new NotFoundException();
+    if (enrollment.status !== 'WAITLIST') {
+      throw new BadRequestException('Solo se puede ofrecer plaza a quien está en lista de espera');
+    }
+    if (!this.email.enabled) {
+      throw new BadRequestException('El envío de email no está configurado');
+    }
+    const to = familyEmails(enrollment.student);
+    if (to.length === 0) {
+      throw new BadRequestException('Ni el alumno ni su familia tienen email: avísales por teléfono');
+    }
+
+    const { student, group } = enrollment;
+    const data = {
+      academy: student.tenant.legalName ?? student.tenant.name,
+      studentName: `${student.firstName} ${student.lastName}`,
+      groupName: group.name,
+      courseName: group.course.name,
+      contactEmail: student.tenant.contactEmail,
+      contactPhone: student.tenant.contactPhone,
+    };
+    const ok = await this.email.send(to, spotOfferSubject(data), spotOfferHtml(data), {
+      fromName: student.tenant.name,
+      replyTo: student.tenant.contactEmail,
+    });
+    if (!ok) throw new BadRequestException('No se pudo enviar el email. Inténtalo de nuevo.');
+
+    return this.prisma.enrollment.update({
+      where: { id },
+      data: { spotOfferedAt: new Date() },
     });
   }
 

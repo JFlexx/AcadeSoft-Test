@@ -65,13 +65,15 @@ export class PublicService {
     });
     if (!group) throw new BadRequestException('Grupo no disponible');
 
+    let full = false;
     if (group.maxCapacity != null) {
       const active = await this.prisma.enrollment.count({
         where: { groupId: group.id, status: 'ACTIVE' },
       });
-      if (active >= group.maxCapacity) {
-        throw new BadRequestException('Este grupo está completo');
-      }
+      full = active >= group.maxCapacity;
+    }
+    if (full && !dto.waitlist) {
+      throw new BadRequestException('Este grupo está completo');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -89,7 +91,7 @@ export class PublicService {
         data: {
           studentId: student.id,
           groupId: group.id,
-          status: 'PENDING',
+          status: full ? 'WAITLIST' : 'PENDING',
           notes: dto.notes?.trim(),
         },
       });
@@ -110,7 +112,19 @@ export class PublicService {
         });
       }
 
-      return { ok: true, studentId: student.id, enrollmentId: enrollment.id };
+      if (!full) {
+        return { ok: true, studentId: student.id, enrollmentId: enrollment.id, waitlisted: false };
+      }
+      const position = await tx.enrollment.count({
+        where: { groupId: group.id, status: 'WAITLIST' },
+      });
+      return {
+        ok: true,
+        studentId: student.id,
+        enrollmentId: enrollment.id,
+        waitlisted: true,
+        position,
+      };
     });
   }
 }
