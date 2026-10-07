@@ -99,6 +99,9 @@ Al entrar, en el menú lateral hay estas secciones:
   con su hora de inicio y fin y los días sin clase sombreados.
 - Filtros por grupo y por profesor; cada clase aparece con el color de su curso.
 - **Exportar a `.ics`**: se importa en Google Calendar / Apple Calendar.
+- **Aulas** (Ajustes): cada grupo tiene su aula habitual y una clase concreta
+  puede cambiar de aula. El calendario filtra por aula y **avisa si dos clases
+  coinciden en la misma aula**.
 
 ### 6. Asistencia
 - En cada clase se puede **pasar lista**: presente, ausente, tarde o justificado,
@@ -206,6 +209,14 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
 - **Protección contra ataques de fuerza bruta y registros masivos** (límite de
   intentos por minuto).
 
+### 14b. Equipo y permisos
+- **Administración**: todo.
+- **Secretaría** (se da de alta en Ajustes → Equipo): lleva el día a día
+  (alumnos, inscripciones, asistencia, notas, cobros, remesas, mensajes,
+  informes…) pero no puede cambiar los ajustes de la academia, dar acceso a
+  profesores ni gestionar el equipo.
+- **Profesores** (app del móvil) y **familias** (portal), cada uno solo con lo suyo.
+
 ### 15. Portal de familias
 - Cada familia puede tener su **propio acceso** para ver, en modo consulta, la
   información de sus hijos: **grupos, facturas y asistencia**.
@@ -284,6 +295,7 @@ Acceso a la demo:
 - Web: **http://localhost:3000**
 - Administración: **admin@acme.local** · **ChangeMe123!**
 - Profesor (app móvil): **laura@demo.local** · **Profe123!**
+- Secretaría: **secretaria@demo.local** · **Secre123!**
 - Familia (portal): **familia@demo.local** · **Familia123!**
 
 ---
