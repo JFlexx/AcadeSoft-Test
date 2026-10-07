@@ -296,7 +296,7 @@ export default function InvoicesPage() {
         </form>
       )}
 
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <SummaryCard label="Facturado" value={formatEur(totals.billed)} />
         <SummaryCard
           label="Cobrado"

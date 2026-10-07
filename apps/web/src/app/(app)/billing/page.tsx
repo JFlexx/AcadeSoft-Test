@@ -281,7 +281,7 @@ export default function BillingPage() {
 
         {response && (
           <>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <SummaryCard
                 label={response.dryRun ? 'Se crearán' : 'Creadas'}
                 value={
@@ -408,7 +408,7 @@ export default function BillingPage() {
 
         {sepaPreview && (
           <>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <SummaryCard
                 label="Domiciliables"
                 value={sepaPreview.count}
