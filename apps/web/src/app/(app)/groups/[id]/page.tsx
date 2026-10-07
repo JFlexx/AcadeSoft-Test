@@ -13,6 +13,7 @@ import { GroupSchedule } from '@/components/group-schedule';
 import { GroupWaitlist } from '@/components/group-waitlist';
 import { ChargeGroupPanel } from '@/components/charge-group-panel';
 import { GradesEditor } from '@/components/grades-editor';
+import { GroupReportCards } from '@/components/report-card-panel';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -133,6 +134,7 @@ export default function GroupDetailPage() {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [showPastSessions, setShowPastSessions] = useState(false);
   const [chargeOpen, setChargeOpen] = useState(false);
+  const [reportCardsOpen, setReportCardsOpen] = useState(false);
 
   // Per-enrollment fee override drafts (live editing state)
   const [feeDrafts, setFeeDrafts] = useState<Record<string, string>>({});
@@ -668,7 +670,17 @@ export default function GroupDetailPage() {
       )}
 
       <section className="mt-10">
-        <h2 className="font-medium mb-3">Notas</h2>
+        <header className="flex items-center justify-between mb-3">
+          <h2 className="font-medium">Notas</h2>
+          {!reportCardsOpen && (
+            <button onClick={() => setReportCardsOpen(true)} className="btn-secondary">
+              Enviar boletines
+            </button>
+          )}
+        </header>
+        {reportCardsOpen && (
+          <GroupReportCards groupId={group.id} onClose={() => setReportCardsOpen(false)} />
+        )}
         <GradesEditor groupId={group.id} basePath="" />
       </section>
 
