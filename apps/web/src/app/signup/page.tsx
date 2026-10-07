@@ -27,6 +27,7 @@ export default function SignupPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,6 +52,7 @@ export default function SignupPage() {
         lastName: lastName.trim(),
         email: email.trim(),
         password,
+        acceptTerms,
       });
       router.replace('/');
     } catch (err) {
@@ -186,6 +188,31 @@ export default function SignupPage() {
           />
           <p className="text-xs text-gray-500">Mínimo 8 caracteres.</p>
         </div>
+
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            required
+            checked={acceptTerms}
+            onChange={(e) => setAcceptTerms(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Acepto los{' '}
+            <a href="/legal/terminos" target="_blank" className="text-brand-700 underline">
+              términos del servicio
+            </a>{' '}
+            y el{' '}
+            <a href="/legal/encargado" target="_blank" className="text-brand-700 underline">
+              contrato de encargado del tratamiento
+            </a>
+            , y he leído la{' '}
+            <a href="/legal/privacidad" target="_blank" className="text-brand-700 underline">
+              política de privacidad
+            </a>
+            .
+          </span>
+        </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

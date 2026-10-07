@@ -29,6 +29,7 @@ export type SignupInput = {
   lastName: string;
   email: string;
   password: string;
+  acceptTerms: boolean;
 };
 
 type AuthContextValue = {

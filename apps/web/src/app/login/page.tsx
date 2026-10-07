@@ -116,6 +116,10 @@ export default function LoginPage() {
             Crea tu academia
           </Link>
         </p>
+        <p className="text-center text-xs text-gray-400 space-x-3">
+          <a href="/legal/terminos" className="hover:underline">Términos</a>
+          <a href="/legal/privacidad" className="hover:underline">Privacidad</a>
+        </p>
       </form>
     </main>
   );

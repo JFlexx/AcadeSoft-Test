@@ -1,4 +1,5 @@
 import {
+  Equals,
   IsBoolean,
   IsEmail,
   IsNotEmpty,
@@ -59,4 +60,8 @@ export class PublicEnrollDto {
   @IsOptional()
   @IsBoolean()
   waitlist?: boolean;
+
+  /** "He leído la política de privacidad de la academia" (required). */
+  @Equals(true, { message: 'Debes aceptar la política de privacidad' })
+  acceptPrivacy!: boolean;
 }

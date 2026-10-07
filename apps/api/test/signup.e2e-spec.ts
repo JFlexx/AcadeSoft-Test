@@ -25,6 +25,7 @@ describe('Signup (e2e)', () => {
   }
 
   const validPayload = {
+    acceptTerms: true,
     tenantName: 'New Academy',
     tenantSlug: 'new-academy',
     firstName: 'Jane',
@@ -52,6 +53,17 @@ describe('Signup (e2e)', () => {
     expect(user?.firstName).toBe('Jane');
     expect(user?.role.name).toBe('admin');
     expect(user?.tenantId).toBe(tenant?.id);
+  });
+
+  it('requires accepting the terms and the processing agreement, and records when', async () => {
+    const { acceptTerms, ...withoutTerms } = validPayload;
+    void acceptTerms;
+    await http().post('/auth/signup').send(withoutTerms).expect(400);
+    await http().post('/auth/signup').send({ ...validPayload, acceptTerms: false }).expect(400);
+
+    await http().post('/auth/signup').send(validPayload).expect(201);
+    const tenant = await prisma.tenant.findUniqueOrThrow({ where: { slug: 'new-academy' } });
+    expect(tenant.termsAcceptedAt).not.toBeNull();
   });
 
   it('returns a token usable for authenticated requests', async () => {

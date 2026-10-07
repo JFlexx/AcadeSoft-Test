@@ -70,7 +70,7 @@ describe('Public self-service enrollment (e2e)', () => {
   it('accepts a public enrollment and files it as PENDING for review', async () => {
     const res = await http()
       .post('/public/academy/acme/enroll')
-      .send({
+      .send({ acceptPrivacy: true,
         firstName: 'Ana',
         lastName: 'García',
         email: 'ana@example.com',
@@ -127,7 +127,7 @@ describe('Public self-service enrollment (e2e)', () => {
 
     await http()
       .post('/public/academy/acme/enroll')
-      .send({ firstName: 'Nuevo', lastName: 'Alumno', groupId: small.body.id })
+      .send({ acceptPrivacy: true, firstName: 'Nuevo', lastName: 'Alumno', groupId: small.body.id })
       .expect(400);
   });
 
@@ -135,22 +135,54 @@ describe('Public self-service enrollment (e2e)', () => {
     await http().get('/public/academy/ghost/groups').expect(404);
     await http()
       .post('/public/academy/ghost/enroll')
-      .send({ firstName: 'X', lastName: 'Y', groupId })
+      .send({ acceptPrivacy: true, firstName: 'X', lastName: 'Y', groupId })
       .expect(404);
     await http()
       .post('/public/academy/acme/enroll')
-      .send({ firstName: 'X', lastName: 'Y', groupId: 'nope' })
+      .send({ acceptPrivacy: true, firstName: 'X', lastName: 'Y', groupId: 'nope' })
       .expect(400);
+  });
+
+  it('requires accepting the academy privacy policy, and records when', async () => {
+    const res = await http()
+      .post('/public/academy/acme/enroll')
+      .send({ firstName: 'Ana', lastName: 'García', groupId })
+      .expect(400);
+    expect(JSON.stringify(res.body.message)).toMatch(/política de privacidad/);
+    await http()
+      .post('/public/academy/acme/enroll')
+      .send({ acceptPrivacy: false, firstName: 'Ana', lastName: 'García', groupId })
+      .expect(400);
+
+    const ok = await http()
+      .post('/public/academy/acme/enroll')
+      .send({ acceptPrivacy: true, firstName: 'Ana', lastName: 'García', groupId })
+      .expect(201);
+    const student = await prisma.student.findUniqueOrThrow({ where: { id: ok.body.studentId } });
+    expect(student.privacyAcceptedAt).not.toBeNull();
+
+    // The page shows who is responsible for the data.
+    await prisma.tenant.updateMany({
+      where: { slug: 'acme' },
+      data: { legalName: 'Acme Formación SL', taxId: 'B12345678', contactEmail: 'hola@acme.es' },
+    });
+    const groups = await http().get('/public/academy/acme/groups').expect(200);
+    expect(groups.body.controller).toEqual({
+      name: 'Acme Formación SL',
+      taxId: 'B12345678',
+      address: null,
+      contactEmail: 'hola@acme.es',
+    });
   });
 
   it('validates the submission (400)', async () => {
     await http()
       .post('/public/academy/acme/enroll')
-      .send({ firstName: 'SoloNombre', groupId })
+      .send({ acceptPrivacy: true, firstName: 'SoloNombre', groupId })
       .expect(400);
     await http()
       .post('/public/academy/acme/enroll')
-      .send({ firstName: 'Ana', lastName: 'García' })
+      .send({ acceptPrivacy: true, firstName: 'Ana', lastName: 'García' })
       .expect(400);
   });
 

@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Equals, IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 /** A family books a free trial class in one specific session. */
 export class PublicTrialDto {
@@ -43,4 +43,8 @@ export class PublicTrialDto {
   @IsString()
   @MaxLength(1000)
   notes?: string;
+
+  /** "He leído la política de privacidad de la academia" (required). */
+  @Equals(true, { message: 'Debes aceptar la política de privacidad' })
+  acceptPrivacy!: boolean;
 }
