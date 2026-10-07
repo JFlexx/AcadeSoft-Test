@@ -14,6 +14,7 @@ type Group = {
   id: string;
   courseId: string;
   teacherId: string | null;
+  roomId: string | null;
   name: string;
   description: string | null;
   maxCapacity: number | null;
@@ -27,6 +28,7 @@ type Group = {
 const EMPTY_FORM = {
   courseId: '',
   teacherId: '',
+  roomId: '',
   name: '',
   description: '',
   maxCapacity: '',
@@ -40,6 +42,7 @@ export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [rooms, setRooms] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCourse, setFilterCourse] = useState<string>('');
   const [showForm, setShowForm] = useState(false);
@@ -51,14 +54,16 @@ export default function GroupsPage() {
   async function refresh() {
     setLoading(true);
     try {
-      const [g, c, t] = await Promise.all([
+      const [g, c, t, r] = await Promise.all([
         api<Group[]>('/groups'),
         api<Course[]>('/courses'),
         api<Teacher[]>('/teachers'),
+        api<{ id: string; name: string }[]>('/rooms'),
       ]);
       setGroups(g);
       setCourses(c);
       setTeachers(t);
+      setRooms(r);
     } finally {
       setLoading(false);
     }
@@ -93,6 +98,7 @@ export default function GroupsPage() {
     setForm({
       courseId: g.courseId,
       teacherId: g.teacherId ?? '',
+      roomId: g.roomId ?? '',
       name: g.name,
       description: g.description ?? '',
       maxCapacity: g.maxCapacity?.toString() ?? '',
@@ -124,6 +130,8 @@ export default function GroupsPage() {
       else if (form.courseId !== editing.courseId) payload.courseId = form.courseId;
 
       if (form.teacherId) payload.teacherId = form.teacherId;
+      if (form.roomId) payload.roomId = form.roomId;
+      else if (editing?.roomId) payload.roomId = null;
       if (form.description.trim()) payload.description = form.description.trim();
       if (form.maxCapacity) payload.maxCapacity = Number(form.maxCapacity);
       if (form.monthlyFee) payload.monthlyFee = Number(form.monthlyFee);
@@ -229,6 +237,22 @@ export default function GroupsPage() {
                 ))}
               </select>
             </Field>
+            {rooms.length > 0 && (
+              <Field label="Aula habitual (opcional)">
+                <select
+                  value={form.roomId}
+                  onChange={(e) => setForm({ ...form, roomId: e.target.value })}
+                  className="w-full border rounded px-2 py-1 text-sm bg-white"
+                >
+                  <option value="">Sin aula</option>
+                  {rooms.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label="Nombre" required>
               <input
                 type="text"

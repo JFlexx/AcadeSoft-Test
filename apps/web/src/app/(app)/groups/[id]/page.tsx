@@ -22,6 +22,7 @@ type Group = {
   id: string;
   courseId: string;
   teacherId: string | null;
+  roomId: string | null;
   name: string;
   description: string | null;
   maxCapacity: number | null;
@@ -55,6 +56,7 @@ type Session = {
   notes: string | null;
   durationMinutes: number | null;
   cancelledByHolidayId: string | null;
+  roomId: string | null;
 };
 
 const ENROLLMENT_STATUS_LABEL: Record<Enrollment['status'], string> = {
@@ -82,6 +84,7 @@ const EMPTY_SESSION_FORM = {
   teacherId: '',
   notes: '',
   durationMinutes: '60',
+  roomId: '',
 };
 
 const DEFAULT_DURATION = 60;
@@ -114,6 +117,7 @@ export default function GroupDetailPage() {
   const [group, setGroup] = useState<Group | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
   const [allTeachers, setAllTeachers] = useState<Teacher[]>([]);
+  const [rooms, setRooms] = useState<{ id: string; name: string }[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -145,13 +149,15 @@ export default function GroupDetailPage() {
     try {
       const g = await api<Group>(`/groups/${groupId}`);
       setGroup(g);
-      const [enr, sess, allStudents, allCourses, teachers] = await Promise.all([
+      const [enr, sess, allStudents, allCourses, teachers, allRooms] = await Promise.all([
         api<Enrollment[]>(`/enrollments?groupId=${groupId}`),
         api<Session[]>(`/sessions?groupId=${groupId}`),
         api<Student[]>('/students'),
         api<Course[]>('/courses'),
         api<Teacher[]>('/teachers'),
+        api<{ id: string; name: string }[]>('/rooms'),
       ]);
+      setRooms(allRooms);
       setEnrollments(enr);
       setSessions(sess);
       setStudents(allStudents);
@@ -294,6 +300,7 @@ export default function GroupDetailPage() {
       teacherId: group?.teacherId ?? '',
       notes: '',
       durationMinutes: String(DEFAULT_DURATION),
+      roomId: '',
     });
     setShowSessionForm(true);
     setSessionError(null);
@@ -308,6 +315,7 @@ export default function GroupDetailPage() {
       teacherId: s.teacherId ?? '',
       notes: s.notes ?? '',
       durationMinutes: String(s.durationMinutes ?? DEFAULT_DURATION),
+      roomId: s.roomId ?? '',
     });
     setShowSessionForm(true);
     setSessionError(null);
@@ -330,6 +338,8 @@ export default function GroupDetailPage() {
         durationMinutes: Number(sessionForm.durationMinutes),
       };
       if (sessionForm.teacherId) payload.teacherId = sessionForm.teacherId;
+      if (sessionForm.roomId) payload.roomId = sessionForm.roomId;
+      else if (editingSession?.roomId) payload.roomId = null;
       if (sessionForm.notes.trim()) payload.notes = sessionForm.notes.trim();
 
       if (editingSession) {
@@ -469,6 +479,8 @@ export default function GroupDetailPage() {
               )
             : 'Sin matrícula'}
         </span>
+        <span className="text-gray-500">Aula</span>
+        <span>{rooms.find((r) => r.id === group.roomId)?.name ?? 'Sin aula'}</span>
         <span className="text-gray-500">Estado</span>
         <span>{group.isActive ? 'Activo' : 'Inactivo'}</span>
       </section>
@@ -731,6 +743,27 @@ export default function GroupDetailPage() {
                   ))}
                 </select>
               </label>
+              {rooms.length > 0 && (
+                <label className="block">
+                  <span className="text-xs text-gray-600 block mb-1">Aula</span>
+                  <select
+                    value={sessionForm.roomId}
+                    onChange={(e) => setSessionForm({ ...sessionForm, roomId: e.target.value })}
+                    className="w-full border rounded px-2 py-1 text-sm bg-white"
+                  >
+                    <option value="">
+                      {group?.roomId
+                        ? `La del grupo (${rooms.find((r) => r.id === group.roomId)?.name ?? ''})`
+                        : 'Sin aula'}
+                    </option>
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label className="block">
                 <span className="text-xs text-gray-600 block mb-1">Duración (min) *</span>
                 <input
