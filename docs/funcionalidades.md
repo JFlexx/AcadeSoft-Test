@@ -52,6 +52,7 @@ Al entrar, en el menú lateral hay estas secciones:
 | **Clases de prueba** | Quién viene a probar, quién vino y a quién inscribir. |
 | **Facturas** | Todas las facturas, con su estado de cobro. Exportable a Excel. |
 | **Mensualidades** | Generar de golpe las facturas del mes y la remesa bancaria SEPA. |
+| **Informes** | Ingresos, cobros, morosidad, alumnos y asistencia; exportación para la gestoría. |
 | **Ajustes** | Datos fiscales de la academia, contacto, configuración bancaria, avisos automáticos y días sin clase. |
 
 ---
@@ -177,6 +178,15 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
 - **Código QR de verificación** de la AEAT impreso en el PDF.
 - Para corregir una factura ya emitida se hace una **factura rectificativa**
   (la original queda anulada pero conservada), como manda la norma.
+
+### 11b. Informes
+- Por periodo (curso, mes, trimestre, año o fechas a medida): **facturado y
+  cobrado** (gráfico mes a mes y desglose por grupo), **alumnos** activos con
+  altas y bajas, y **asistencia** por grupo.
+- **Morosidad**: lo pendiente hoy por antigüedad (sin vencer, 0–30, 31–60, +60
+  días) y quién debe más.
+- **Para la gestoría**: libro de facturas emitidas y cobros del periodo en Excel
+  (CSV).
 
 ### 12. Panel de inicio (dashboard)
 - Cifras clave nada más entrar: alumnos activos, grupos activos, clases de la
