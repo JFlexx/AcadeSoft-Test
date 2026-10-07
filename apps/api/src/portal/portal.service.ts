@@ -79,6 +79,15 @@ export class PortalService {
           orderBy: { markedAt: 'desc' },
           take: 20,
         },
+        assessmentResults: {
+          select: {
+            score: true,
+            comment: true,
+            assessment: { select: { name: true, date: true, group: { select: { name: true } } } },
+          },
+          orderBy: { assessment: { date: 'desc' } },
+          take: 30,
+        },
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
