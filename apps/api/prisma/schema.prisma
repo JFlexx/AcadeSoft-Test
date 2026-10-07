@@ -138,6 +138,7 @@ model Tenant {
   trialClasses TrialClass[]
   sepaRemittances SepaRemittance[]
   assessments  Assessment[]
+  rooms        Room[]
 
   @@map("tenants")
 }
@@ -295,6 +296,8 @@ model Group {
   startDate   DateTime?
   endDate     DateTime?
   maxCapacity Int?
+  // Usual classroom; a session can override it.
+  roomId      String?
   monthlyFee  Decimal?  @db.Decimal(10, 2)
   // One-off fee charged when a student joins (matrícula).
   enrollmentFee Decimal? @db.Decimal(10, 2)
@@ -305,6 +308,7 @@ model Group {
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   course      Course       @relation(fields: [courseId], references: [id])
   teacher     Teacher?     @relation(fields: [teacherId], references: [id])
+  room        Room?        @relation(fields: [roomId], references: [id], onDelete: SetNull)
   enrollments Enrollment[]
   sessions    Session[]
   scheduleSlots ScheduleSlot[]
@@ -406,6 +410,23 @@ model AssessmentResult {
   @@map("assessment_results")
 }
 
+// A classroom of the academy. Two classes in the same room at the same
+// time are reported as a conflict (see RoomsService.conflicts).
+model Room {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  capacity  Int?
+  createdAt DateTime @default(now())
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  groups   Group[]
+  sessions Session[]
+
+  @@unique([tenantId, name])
+  @@map("rooms")
+}
+
 model Enrollment {
   id                 String           @id @default(cuid())
   studentId          String
@@ -443,6 +464,8 @@ model Session {
   // Set when a holiday cancelled this class, so removing the holiday can
   // put it back on the calendar.
   cancelledByHolidayId String?
+  // Overrides the group's room for this class only.
+  roomId      String?
   notes       String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -451,6 +474,7 @@ model Session {
   group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
   teacher     Teacher?     @relation(fields: [teacherId], references: [id])
   cancelledByHoliday Holiday? @relation(fields: [cancelledByHolidayId], references: [id], onDelete: SetNull)
+  room        Room?        @relation(fields: [roomId], references: [id], onDelete: SetNull)
   attendances Attendance[]
   trialClasses TrialClass[]
 

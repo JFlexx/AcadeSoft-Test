@@ -19,6 +19,11 @@ export class UpdateGroupDto {
   @IsString()
   teacherId?: string;
 
+  /** Usual classroom; null clears it. */
+  @IsOptional()
+  @IsString()
+  roomId?: string | null;
+
   @IsOptional()
   @IsString()
   @MaxLength(150)

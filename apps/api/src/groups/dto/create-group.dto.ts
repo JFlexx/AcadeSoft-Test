@@ -19,6 +19,11 @@ export class CreateGroupDto {
   @IsString()
   teacherId?: string;
 
+  /** Usual classroom; null clears it. */
+  @IsOptional()
+  @IsString()
+  roomId?: string | null;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(150)
