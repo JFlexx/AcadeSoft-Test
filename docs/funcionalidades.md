@@ -149,6 +149,14 @@ Al entrar, en el menú lateral hay estas secciones:
 - Cada alumno guarda su IBAN y su mandato de domiciliación.
 - Vista previa de qué se va a cobrar y a quién, y por qué se omite a alguien
   (p. ej. si le falta el mandato).
+- **Historial de remesas**: cada remesa descargada queda registrada, y un recibo
+  pendiente en el banco **nunca se envía dos veces**. Se puede volver a
+  descargar el mismo fichero o anular una remesa que no llegó al banco.
+- **Marcar como cobrada**: registra de una vez el pago de todos los recibos.
+- **Recibos devueltos**: se marca la devolución con el motivo del banco; la
+  factura vuelve a quedar pendiente (y puede ir en otra remesa o pagarse con
+  tarjeta). Opcionalmente se repercute la comisión del banco a la familia y se
+  le avisa por email.
 
 ### 11. Cumplimiento legal de facturación (Veri\*Factu)
 La ley española antifraude (RD 1007/2023) exige que las facturas no se puedan
