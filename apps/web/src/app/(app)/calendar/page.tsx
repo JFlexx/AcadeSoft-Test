@@ -15,9 +15,22 @@ type Session = {
   scheduledAt: string;
   status: SessionStatus;
   durationMinutes: number | null;
+  roomId: string | null;
 };
 type Holiday = { id: string; name: string; startDate: string; endDate: string };
-type Group = { id: string; name: string; courseId: string; teacherId: string | null };
+type Group = {
+  id: string;
+  name: string;
+  courseId: string;
+  teacherId: string | null;
+  roomId: string | null;
+};
+type Room = { id: string; name: string };
+type Conflict = {
+  room: Room;
+  a: { sessionId: string; group: { name: string }; start: string };
+  b: { sessionId: string; group: { name: string }; start: string };
+};
 type Course = { id: string; name: string; color: string | null };
 type Teacher = { id: string; firstName: string; lastName: string };
 
@@ -77,6 +90,9 @@ export default function CalendarPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [filterRoom, setFilterRoom] = useState('');
+  const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [view, setView] = useState<ViewMode>('week');
@@ -88,14 +104,16 @@ export default function CalendarPage() {
     async function load() {
       setLoading(true);
       try {
-        const [s, g, c, t, h] = await Promise.all([
+        const [s, g, c, t, h, r] = await Promise.all([
           api<Session[]>('/sessions'),
           api<Group[]>('/groups'),
           api<Course[]>('/courses'),
           api<Teacher[]>('/teachers'),
           api<Holiday[]>('/holidays'),
+          api<Room[]>('/rooms'),
         ]);
         setHolidays(h);
+        setRooms(r);
         setSessions(s);
         setGroups(g);
         setCourses(c);
@@ -125,6 +143,11 @@ export default function CalendarPage() {
     return holidays.find((h) => h.startDate <= d && d <= h.endDate)?.name ?? null;
   }
 
+  function roomOf(session: Session): Room | null {
+    const id = session.roomId ?? groupById[session.groupId]?.roomId ?? null;
+    return id ? (rooms.find((r) => r.id === id) ?? null) : null;
+  }
+
   function colorFor(session: Session): string {
     const group = groupById[session.groupId];
     const course = group ? courseById[group.courseId] : null;
@@ -142,13 +165,15 @@ export default function CalendarPage() {
     () =>
       sessions.filter((s) => {
         if (filterGroup && s.groupId !== filterGroup) return false;
+        if (filterRoom && roomOf(s)?.id !== filterRoom) return false;
         if (filterTeacher) {
           const id = s.teacherId ?? groupById[s.groupId]?.teacherId ?? null;
           if (id !== filterTeacher) return false;
         }
         return true;
       }),
-    [sessions, filterGroup, filterTeacher, groupById],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessions, filterGroup, filterTeacher, filterRoom, groupById, rooms],
   );
 
   // Bucket sessions by local day, each bucket sorted by time.
@@ -165,6 +190,21 @@ export default function CalendarPage() {
     }
     return map;
   }, [filtered]);
+
+  // Room clashes in the visible period (week or month).
+  useEffect(() => {
+    if (rooms.length === 0) {
+      setConflicts([]);
+      return;
+    }
+    const first = view === 'week' ? startOfWeek(anchor) : new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const last = view === 'week' ? addDays(first, 6) : new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    api<Conflict[]>(`/rooms/conflicts?from=${fmt(first)}&to=${fmt(last)}`)
+      .then(setConflicts)
+      .catch(() => setConflicts([]));
+  }, [anchor, view, rooms.length]);
 
   function go(delta: number) {
     setAnchor((prev) => (view === 'week' ? addDays(prev, delta * 7) : addMonths(prev, delta)));
@@ -243,6 +283,20 @@ export default function CalendarPage() {
               </option>
             ))}
           </select>
+          {rooms.length > 0 && (
+            <select
+              value={filterRoom}
+              onChange={(e) => setFilterRoom(e.target.value)}
+              className="border rounded px-2 py-1 text-sm bg-white"
+            >
+              <option value="">Todas las aulas</option>
+              {rooms.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             value={filterTeacher}
             onChange={(e) => setFilterTeacher(e.target.value)}
@@ -257,6 +311,29 @@ export default function CalendarPage() {
           </select>
         </div>
       </div>
+
+      {conflicts.length > 0 && (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p className="font-medium">
+            {conflicts.length === 1 ? '1 conflicto de aula' : `${conflicts.length} conflictos de aula`} en este
+            periodo
+          </p>
+          <ul className="mt-1 space-y-0.5 text-xs">
+            {conflicts.slice(0, 5).map((c) => (
+              <li key={c.a.sessionId + c.b.sessionId}>
+                {c.room.name}: {c.a.group.name} y {c.b.group.name} el{' '}
+                {new Date(c.b.start).toLocaleString('es-ES', {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-gray-500">Cargando…</p>
@@ -279,6 +356,7 @@ export default function CalendarPage() {
           colorFor={colorFor}
           teacherFor={teacherFor}
           holidayFor={holidayFor}
+          roomFor={(s) => roomOf(s)?.name ?? null}
         />
       ) : (
         <MonthView
@@ -302,6 +380,7 @@ function WeekView({
   colorFor,
   teacherFor,
   holidayFor,
+  roomFor,
 }: {
   anchor: Date;
   byDay: Map<string, Session[]>;
@@ -309,6 +388,7 @@ function WeekView({
   colorFor: (s: Session) => string;
   teacherFor: (s: Session) => string | null;
   holidayFor: (day: Date) => string | null;
+  roomFor: (s: Session) => string | null;
 }) {
   const monday = startOfWeek(anchor);
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
@@ -349,6 +429,7 @@ function WeekView({
                     color={colorFor(s)}
                     groupName={groupById[s.groupId]?.name ?? 'Grupo'}
                     teacher={teacherFor(s)}
+                    room={roomFor(s)}
                   />
                 ))
               )}
@@ -365,11 +446,13 @@ function SessionChip({
   color,
   groupName,
   teacher,
+  room,
 }: {
   session: Session;
   color: string;
   groupName: string;
   teacher: string | null;
+  room: string | null;
 }) {
   const cancelled = session.status === 'CANCELLED';
   return (
@@ -384,7 +467,9 @@ function SessionChip({
         {formatTime(session.scheduledAt)}–{formatTime(sessionEnd(session).toISOString())} ·{' '}
         {groupName}
       </span>
-      {teacher && <span className="block text-gray-500 truncate">{teacher}</span>}
+      {(teacher || room) && (
+        <span className="block text-gray-500 truncate">{[teacher, room].filter(Boolean).join(' · ')}</span>
+      )}
     </Link>
   );
 }

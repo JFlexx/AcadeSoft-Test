@@ -5,6 +5,7 @@ import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { HolidaysPanel } from '@/components/holidays-panel';
+import { RoomsPanel } from '@/components/rooms-panel';
 
 type Settings = {
   id: string;
@@ -422,6 +423,10 @@ export default function SettingsPage() {
 
       <section className="border-t pt-5 mt-8">
         <HolidaysPanel />
+      </section>
+
+      <section className="border-t pt-5 mt-8">
+        <RoomsPanel />
       </section>
     </div>
   );
