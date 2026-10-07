@@ -15,6 +15,7 @@ import {
   CalendarClock,
   Settings,
   Sparkles,
+  BarChart3,
   CircleUser,
   LogOut,
   type LucideIcon,
@@ -33,6 +34,7 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/trials', label: 'Clases de prueba', icon: Sparkles },
   { href: '/invoices', label: 'Facturas', icon: Receipt },
   { href: '/billing', label: 'Mensualidades', icon: CalendarClock },
+  { href: '/reports', label: 'Informes', icon: BarChart3 },
   { href: '/settings', label: 'Ajustes', icon: Settings },
   { href: '/me', label: 'Mi cuenta', icon: CircleUser },
 ];
