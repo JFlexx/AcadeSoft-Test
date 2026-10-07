@@ -20,7 +20,7 @@ import { RoomDto, UpdateRoomDto } from './dto/room.dto';
 import { ReportRangeDto } from '../reports/dto/report-range.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('rooms')
 export class RoomsController {
   constructor(private readonly rooms: RoomsService) {}

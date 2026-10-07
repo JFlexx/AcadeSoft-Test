@@ -19,7 +19,7 @@ import { ReportCardsService } from './report-cards.service';
 import { ReportCardDto } from './dto/report-card.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller()
 export class ReportCardsController {
   constructor(private readonly reportCards: ReportCardsService) {}

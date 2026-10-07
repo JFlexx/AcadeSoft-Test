@@ -20,7 +20,7 @@ import { CreateAssessmentDto, SaveResultsDto, UpdateAssessmentDto } from './dto/
 
 /** Admin: grades of any group of the academy. */
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller()
 export class AssessmentsController {
   constructor(private readonly assessments: AssessmentsService) {}

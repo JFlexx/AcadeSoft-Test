@@ -80,7 +80,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 p-2 space-y-0.5">
-          {NAV.map((item) => {
+          {NAV.filter((item) => item.href !== '/settings' || user.role === 'admin').map((item) => {
             const active =
               item.href === '/'
                 ? pathname === '/'

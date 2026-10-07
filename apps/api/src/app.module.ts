@@ -31,6 +31,7 @@ import { TrialsModule } from './trials/trials.module';
 import { AssessmentsModule } from './assessments/assessments.module';
 import { ReportsModule } from './reports/reports.module';
 import { RoomsModule } from './rooms/rooms.module';
+import { TeamModule } from './team/team.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { RoomsModule } from './rooms/rooms.module';
     AssessmentsModule,
     ReportsModule,
     RoomsModule,
+    TeamModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

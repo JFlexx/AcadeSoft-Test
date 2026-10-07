@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { HolidaysPanel } from '@/components/holidays-panel';
 import { RoomsPanel } from '@/components/rooms-panel';
+import { TeamPanel } from '@/components/team-panel';
+import { useAuth } from '@/lib/auth-context';
 
 type Settings = {
   id: string;
@@ -67,6 +69,7 @@ function toForm(s: Settings): FormState {
 }
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -146,6 +149,16 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (user && user.role !== 'admin') {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-gray-600">
+          Solo la administración de la academia puede cambiar los ajustes.
+        </p>
+      </div>
+    );
   }
 
   if (loading) {
@@ -427,6 +440,10 @@ export default function SettingsPage() {
 
       <section className="border-t pt-5 mt-8">
         <RoomsPanel />
+      </section>
+
+      <section className="border-t pt-5 mt-8">
+        <TeamPanel />
       </section>
     </div>
   );

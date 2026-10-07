@@ -13,7 +13,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { InvoicesService } from './invoices.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly invoicesService: InvoicesService) {}
