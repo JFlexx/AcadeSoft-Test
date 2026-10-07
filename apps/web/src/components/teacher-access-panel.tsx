@@ -5,6 +5,7 @@ import { KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
+import { useAuth } from '@/lib/auth-context';
 
 type Access = { email: string; lastLoginAt: string | null } | null;
 
@@ -18,6 +19,8 @@ export function TeacherAccessPanel({
   teacherId: string;
   defaultEmail: string | null;
 }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [access, setAccess] = useState<Access>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -90,10 +93,14 @@ export function TeacherAccessPanel({
                 : 'Todavía no ha entrado'}
             </span>
           </span>
-          <button onClick={revoke} className="text-sm text-red-600 hover:underline shrink-0">
-            Quitar acceso
-          </button>
+          {isAdmin && (
+            <button onClick={revoke} className="text-sm text-red-600 hover:underline shrink-0">
+              Quitar acceso
+            </button>
+          )}
         </div>
+      ) : !isAdmin ? (
+        <p className="text-sm text-gray-500">Sin acceso. Solo la administración puede dárselo.</p>
       ) : !open ? (
         <button onClick={() => setOpen(true)} className="btn-secondary">
           Dar acceso al profesor

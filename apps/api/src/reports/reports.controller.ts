@@ -7,7 +7,7 @@ import { ReportsService } from './reports.service';
 import { ReportRangeDto } from './dto/report-range.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}

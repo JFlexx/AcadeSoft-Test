@@ -20,7 +20,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('teachers')
 export class TeachersController {
   constructor(private readonly teachersService: TeachersService) {}
@@ -60,6 +60,8 @@ export class TeachersController {
     return this.teachersService.getAccess(tenantId, id);
   }
 
+  // Who can log in is the admin's call.
+  @Roles('admin')
   @Post(':id/access')
   grantAccess(
     @CurrentUser('tenantId') tenantId: string,
@@ -69,6 +71,7 @@ export class TeachersController {
     return this.teachersService.grantAccess(tenantId, id, dto);
   }
 
+  @Roles('admin')
   @Delete(':id/access')
   @HttpCode(HttpStatus.NO_CONTENT)
   revokeAccess(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {

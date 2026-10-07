@@ -7,7 +7,7 @@ import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { SettingsService } from './settings.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
@@ -17,6 +17,8 @@ export class SettingsController {
     return this.settingsService.get(tenantId);
   }
 
+  // Academy settings: the owner/admin only, not the front office.
+  @Roles('admin')
   @Patch()
   update(
     @CurrentUser('tenantId') tenantId: string,

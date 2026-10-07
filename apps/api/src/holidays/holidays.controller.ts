@@ -16,7 +16,7 @@ import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { NationalHolidaysDto } from './dto/national-holidays.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('holidays')
 export class HolidaysController {
   constructor(private readonly holidays: HolidaysService) {}

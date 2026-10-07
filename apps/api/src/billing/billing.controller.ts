@@ -25,7 +25,7 @@ import { RemittancesService } from './remittances.service';
 import { ReturnReceiptDto } from './dto/return-receipt.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('billing')
 export class BillingController {
   constructor(

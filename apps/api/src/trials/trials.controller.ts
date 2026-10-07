@@ -7,7 +7,7 @@ import { TrialsService } from './trials.service';
 import { ConvertTrialDto } from './dto/convert-trial.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('trials')
 export class TrialsController {
   constructor(private readonly trials: TrialsService) {}

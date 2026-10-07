@@ -18,7 +18,7 @@ import { PutScheduleDto } from './dto/put-schedule.dto';
 import { GenerateSessionsDto } from './dto/generate-sessions.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('groups/:groupId/schedule')
 export class ClassScheduleController {
   constructor(private readonly schedule: ClassScheduleService) {}

@@ -27,7 +27,7 @@ import { InvoicesService } from './invoices.service';
 import { StripeService } from '../stripe/stripe.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('invoices')
 export class InvoicesController {
   constructor(
