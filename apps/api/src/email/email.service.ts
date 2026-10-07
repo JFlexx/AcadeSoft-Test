@@ -7,6 +7,8 @@ export type SendOptions = {
   fromName?: string | null;
   /** Where replies go (e.g. the academy's contact email). */
   replyTo?: string | null;
+  /** Files to attach (e.g. a report card PDF). */
+  attachments?: { filename: string; content: Buffer }[];
 };
 
 /** Strips characters that could break or inject into the From header. */
@@ -62,6 +64,7 @@ export class EmailService {
         subject,
         html,
         ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+        ...(opts.attachments?.length ? { attachments: opts.attachments } : {}),
       });
       if (error) {
         this.logger.error(`Fallo enviando "${subject}": ${error.message}`);
