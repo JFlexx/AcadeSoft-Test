@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { EmptyState } from '@/components/empty-state';
+import { StudentReportCard } from '@/components/report-card-panel';
 
 type Student = {
   id: string;
@@ -230,6 +231,10 @@ export default function StudentDetailPage() {
       </div>
 
       <InviteFamily studentId={student.id} />
+
+      <Card title="Boletín de notas" className="mb-8">
+        <StudentReportCard studentId={student.id} />
+      </Card>
 
       {student.notes && (
         <Card title="Notas" className="mb-8">
