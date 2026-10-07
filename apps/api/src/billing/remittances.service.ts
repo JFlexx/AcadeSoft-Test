@@ -1,6 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+import { familyEmails } from '../email/family-emails';
 import { computeStatus } from '../invoices/invoices.service';
+import { createChainedInvoice } from '../invoices/invoice-hash';
+import { ReturnReceiptDto } from './dto/return-receipt.dto';
+import { returnHtml, returnSubject } from './return-email';
+
+const FEE_DUE_DAYS = 7;
 
 /**
  * History of SEPA remittances and their outcome. A remittance is recorded
@@ -10,7 +19,16 @@ import { computeStatus } from '../invoices/invoices.service';
  */
 @Injectable()
 export class RemittancesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(RemittancesService.name);
+  private readonly webOrigin: string;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly email: EmailService,
+    config: ConfigService,
+  ) {
+    this.webOrigin = config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000';
+  }
 
   async list(tenantId: string) {
     const rows = await this.prisma.sepaRemittance.findMany({
@@ -99,7 +117,16 @@ export class RemittancesService {
           select: {
             id: true,
             amount: true,
-            invoice: { select: { id: true, number: true, amount: true, paidAmount: true, dueDate: true, status: true } },
+            invoice: {
+              select: {
+                id: true,
+                number: true,
+                amount: true,
+                paidAmount: true,
+                dueDate: true,
+                status: true,
+              },
+            },
           },
         },
       },
@@ -144,6 +171,133 @@ export class RemittancesService {
       });
     });
     return { registered };
+  }
+
+  /**
+   * The bank returned a receipt (devolución): undoes its direct-debit
+   * payment so the invoice is owed again (and can go into a later
+   * remittance or be paid by card), optionally invoices the bank fee to the
+   * family and emails them.
+   */
+  async returnReceipt(tenantId: string, itemId: string, dto: ReturnReceiptDto, now = new Date()) {
+    const item = await this.prisma.sepaRemittanceItem.findFirst({
+      where: { id: itemId, remittance: { tenantId } },
+      select: {
+        id: true,
+        status: true,
+        payment: { select: { id: true, amount: true } },
+        invoice: {
+          select: {
+            id: true,
+            number: true,
+            amount: true,
+            paidAmount: true,
+            dueDate: true,
+            studentId: true,
+          },
+        },
+      },
+    });
+    if (!item) throw new NotFoundException();
+    if (item.status === 'RETURNED') throw new BadRequestException('Este recibo ya está devuelto');
+
+    const fee = dto.chargeFee && dto.bankFee ? new Prisma.Decimal(dto.bankFee) : null;
+    const { invoice } = item;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      let paid = invoice.paidAmount;
+      if (item.payment) {
+        paid = paid.sub(item.payment.amount);
+        await tx.payment.delete({ where: { id: item.payment.id } });
+      }
+      const updated = await tx.invoice.update({
+        where: { id: invoice.id },
+        data: { paidAmount: paid, status: computeStatus(invoice.amount, paid, invoice.dueDate) },
+        select: { status: true, amount: true, paidAmount: true },
+      });
+      await tx.sepaRemittanceItem.update({
+        where: { id: item.id },
+        data: {
+          status: 'RETURNED',
+          paymentId: null,
+          returnReason: dto.reason.trim(),
+          returnedAt: now,
+        },
+      });
+      const feeInvoice =
+        fee && fee.gt(0)
+          ? await createChainedInvoice(tx, tenantId, {
+              studentId: invoice.studentId,
+              amount: fee,
+              description: `Comisión por devolución del recibo ${invoice.number}`,
+              issueDate: now,
+              dueDate: new Date(now.getTime() + FEE_DUE_DAYS * 24 * 60 * 60 * 1000),
+            })
+          : null;
+      return { invoice: updated, feeInvoice };
+    });
+
+    const notified = dto.notifyFamily
+      ? await this.notifyReturn(tenantId, invoice, result.invoice, result.feeInvoice)
+      : false;
+
+    return {
+      invoiceStatus: result.invoice.status,
+      feeInvoice: result.feeInvoice
+        ? {
+            id: result.feeInvoice.id,
+            number: result.feeInvoice.number,
+            amount: result.feeInvoice.amount,
+          }
+        : null,
+      notified,
+    };
+  }
+
+  /** Best effort: the return is recorded even if the email can't be sent. */
+  private async notifyReturn(
+    tenantId: string,
+    invoice: { number: string; studentId: string },
+    updated: { amount: Prisma.Decimal; paidAmount: Prisma.Decimal },
+    feeInvoice: { number: string; amount: Prisma.Decimal } | null,
+  ): Promise<boolean> {
+    try {
+      const [tenant, student] = await Promise.all([
+        this.prisma.tenant.findUniqueOrThrow({
+          where: { id: tenantId },
+          select: { name: true, legalName: true, contactEmail: true, contactPhone: true },
+        }),
+        this.prisma.student.findUniqueOrThrow({
+          where: { id: invoice.studentId },
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            guardians: { select: { email: true, userId: true } },
+          },
+        }),
+      ]);
+      const to = familyEmails(student);
+      if (to.length === 0) return false;
+      const data = {
+        academy: tenant.legalName ?? tenant.name,
+        studentName: `${student.firstName} ${student.lastName}`,
+        invoiceNumber: invoice.number,
+        pending: Number(updated.amount.sub(updated.paidAmount)),
+        feeInvoiceNumber: feeInvoice?.number ?? null,
+        fee: feeInvoice ? Number(feeInvoice.amount) : null,
+        portalUrl: student.guardians.some((g) => g.userId) ? `${this.webOrigin}/login` : null,
+        contactEmail: tenant.contactEmail,
+        contactPhone: tenant.contactPhone,
+      };
+      return await this.email.send(to, returnSubject(data), returnHtml(data), {
+        fromName: tenant.name,
+        replyTo: tenant.contactEmail,
+      });
+    } catch (err) {
+      this.logger.error(`Return notice failed: ${String(err)}`);
+      return false;
+    }
   }
 
   /** Voids a remittance that never reached the bank, freeing its invoices. */
