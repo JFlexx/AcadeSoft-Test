@@ -137,6 +137,7 @@ model Tenant {
   holidays  Holiday[]
   trialClasses TrialClass[]
   sepaRemittances SepaRemittance[]
+  assessments  Assessment[]
 
   @@map("tenants")
 }
@@ -210,6 +211,7 @@ model Student {
   attendances Attendance[]
   invoices    Invoice[]
   trialClasses TrialClass[]
+  assessmentResults AssessmentResult[]
 
   @@index([tenantId])
   @@index([tenantId, lastName, firstName])
@@ -306,6 +308,7 @@ model Group {
   enrollments Enrollment[]
   sessions    Session[]
   scheduleSlots ScheduleSlot[]
+  assessments   Assessment[]
 
   @@index([tenantId])
   @@index([courseId])
@@ -366,6 +369,41 @@ model TrialClass {
   @@unique([sessionId, studentId])
   @@index([tenantId, createdAt])
   @@map("trial_classes")
+}
+
+// An evaluation of a group ("1ª evaluación", "Examen Unit 3") on a date.
+model Assessment {
+  id        String   @id @default(cuid())
+  tenantId  String
+  groupId   String
+  name      String
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  group   Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  results AssessmentResult[]
+
+  @@index([groupId, date])
+  @@map("assessments")
+}
+
+// A student's grade in an assessment: a 0–10 score and/or a comment.
+model AssessmentResult {
+  id           String   @id @default(cuid())
+  assessmentId String
+  studentId    String
+  score        Decimal? @db.Decimal(4, 2)
+  comment      String?
+  updatedAt    DateTime @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, studentId])
+  @@index([studentId])
+  @@map("assessment_results")
 }
 
 model Enrollment {
