@@ -19,7 +19,7 @@ type InvoiceStatus =
 
 type InvoiceType = 'ORIGINAL' | 'RECTIFICATIVA';
 
-type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER';
+type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER' | 'DIRECT_DEBIT';
 
 type Payment = {
   id: string;
@@ -79,6 +79,7 @@ const METHOD_LABEL: Record<PaymentMethod, string> = {
   CASH: 'Efectivo',
   CARD: 'Tarjeta',
   TRANSFER: 'Transferencia',
+  DIRECT_DEBIT: 'Domiciliación',
   OTHER: 'Otro',
 };
 
@@ -583,11 +584,14 @@ export default function InvoiceDetailPage() {
                   }
                   className="w-full border rounded px-2 py-1 text-sm bg-white"
                 >
-                  {(Object.keys(METHOD_LABEL) as PaymentMethod[]).map((m) => (
-                    <option key={m} value={m}>
-                      {METHOD_LABEL[m]}
-                    </option>
-                  ))}
+                  {/* Direct debits are registered by marking a remittance collected. */}
+                  {(Object.keys(METHOD_LABEL) as PaymentMethod[])
+                    .filter((m) => m !== 'DIRECT_DEBIT')
+                    .map((m) => (
+                      <option key={m} value={m}>
+                        {METHOD_LABEL[m]}
+                      </option>
+                    ))}
                 </select>
               </label>
               <label className="block">

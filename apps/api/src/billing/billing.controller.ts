@@ -22,6 +22,7 @@ import { SepaRemittanceDto } from './dto/sepa-remittance.dto';
 import { ChargeGroupDto } from './dto/charge-group.dto';
 import { GroupChargeService } from './group-charge.service';
 import { RemittancesService } from './remittances.service';
+import { ReturnReceiptDto } from './dto/return-receipt.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
@@ -60,6 +61,17 @@ export class BillingController {
   @HttpCode(HttpStatus.OK)
   collect(@CurrentUser('tenantId') tenantId: string, @Param('id') id: string) {
     return this.remittances.collect(tenantId, id);
+  }
+
+  /** The bank returned one receipt of a remittance (devolución). */
+  @Post('remittance-items/:id/return')
+  @HttpCode(HttpStatus.OK)
+  returnReceipt(
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+    @Body() dto: ReturnReceiptDto,
+  ) {
+    return this.remittances.returnReceipt(tenantId, id, dto);
   }
 
   @Delete('remittances/:id')

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { api, apiBlob, ApiError } from '@/lib/api';
+import { RemittanceHistory } from '@/components/remittance-history';
 import { confirmToast } from '@/lib/confirm';
 
 type GenerationStatus = 'CREATED' | 'SKIPPED' | 'NO_FEE' | 'WOULD_CREATE';
@@ -104,6 +105,7 @@ export default function BillingPage() {
   );
   const [sepaError, setSepaError] = useState<string | null>(null);
   const [collectionDate, setCollectionDate] = useState('');
+  const [remittancesKey, setRemittancesKey] = useState(0);
 
   const years = useMemo(() => {
     const current = now.getFullYear();
@@ -190,7 +192,9 @@ export default function BillingPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success('Remesa SEPA descargada');
+      toast.success('Remesa SEPA descargada y registrada en el historial');
+      setRemittancesKey((k) => k + 1);
+      setSepaPreview(null);
     } catch (err) {
       setSepaError(err instanceof ApiError ? err.message : 'Error descargando XML');
     } finally {
@@ -491,6 +495,18 @@ export default function BillingPage() {
             )}
           </>
         )}
+      </section>
+
+      <section className="border rounded-lg p-4 bg-white space-y-3">
+        <div>
+          <h2 className="font-medium">3. Remesas enviadas</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Cuando el banco cargue la remesa, márcala como cobrada: se registra el pago de cada
+            recibo. Si el banco devuelve alguno, regístralo aquí: la factura vuelve a quedar
+            pendiente.
+          </p>
+        </div>
+        <RemittanceHistory refreshKey={remittancesKey} />
       </section>
     </div>
   );
