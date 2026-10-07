@@ -30,8 +30,19 @@ export async function resetDb(prisma: PrismaService): Promise<void> {
     WHERE schemaname = 'public' AND tablename != '_prisma_migrations'
   `;
   if (tables.length === 0) return;
-  const list = tables.map((t) => `"${t.tablename}"`).join(', ');
-  await prisma.$executeRawUnsafe(`TRUNCATE ${list} RESTART IDENTITY CASCADE`);
+  // DELETE with FK triggers off (session_replication_role, needs a
+  // superuser — true for the Docker and CI databases) is ~15x faster than
+  // TRUNCATE, which must create and fsync new files for every table. No
+  // table uses sequences, so nothing needs RESTART IDENTITY.
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('SET LOCAL session_replication_role = replica');
+      for (const t of tables) await tx.$executeRawUnsafe(`DELETE FROM "${t.tablename}"`);
+    });
+  } catch {
+    const list = tables.map((t) => `"${t.tablename}"`).join(', ');
+    await prisma.$executeRawUnsafe(`TRUNCATE ${list} RESTART IDENTITY CASCADE`);
+  }
 }
 
 export type SeededTenant = {
