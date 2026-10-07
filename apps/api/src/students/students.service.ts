@@ -27,7 +27,8 @@ export class StudentsService {
 
   findAll(tenantId: string) {
     return this.prisma.student.findMany({
-      where: { tenantId },
+      // Erased students only survive on their invoices.
+      where: { tenantId, erasedAt: null },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
   }
@@ -76,6 +77,12 @@ export class StudentsService {
 
   async remove(tenantId: string, id: string): Promise<void> {
     await this.findOne(tenantId, id);
+    const invoices = await this.prisma.invoice.count({ where: { studentId: id } });
+    if (invoices > 0) {
+      throw new ConflictException(
+        'Tiene facturas, que hay que conservar por ley: usa «Suprimir datos personales» (RGPD).',
+      );
+    }
     await this.prisma.student.delete({ where: { id } });
   }
 

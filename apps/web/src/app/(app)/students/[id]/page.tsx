@@ -9,6 +9,8 @@ import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { EmptyState } from '@/components/empty-state';
 import { StudentReportCard } from '@/components/report-card-panel';
+import { GdprPanel } from '@/components/gdpr-panel';
+import { useAuth } from '@/lib/auth-context';
 
 type Student = {
   id: string;
@@ -24,6 +26,7 @@ type Student = {
   mandateDate: string | null;
   discountPercent: string | null;
   isActive: boolean;
+  erasedAt: string | null;
 };
 
 type EnrollmentStatus = 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'DROPPED' | 'WAITLIST';
@@ -110,6 +113,8 @@ export default function StudentDetailPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { user } = useAuth();
 
   useEffect(() => {
     async function load() {
@@ -135,7 +140,7 @@ export default function StudentDetailPage() {
     }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId]);
+  }, [studentId, reloadKey]);
 
   const groupById = useMemo(
     () => Object.fromEntries(groups.map((g) => [g.id, g])),
@@ -206,6 +211,13 @@ export default function StudentDetailPage() {
         )}
       </header>
 
+      {student.erasedAt && (
+        <p className="mb-6 text-sm rounded-lg border border-amber-200 bg-amber-50 text-amber-900 px-3 py-2">
+          Datos personales suprimidos el {new Date(student.erasedAt).toLocaleDateString('es-ES')}{' '}
+          (RGPD). Solo se conservan el nombre y la dirección de sus facturas, como exige la ley.
+        </p>
+      )}
+
       <div className="grid sm:grid-cols-2 gap-6 mb-8">
         <Card title="Datos de contacto">
           <Row label="Email" value={student.email ?? '—'} />
@@ -230,11 +242,21 @@ export default function StudentDetailPage() {
         </Card>
       </div>
 
-      <InviteFamily studentId={student.id} />
+      {!student.erasedAt && <InviteFamily studentId={student.id} />}
 
-      <Card title="Boletín de notas" className="mb-8">
-        <StudentReportCard studentId={student.id} />
-      </Card>
+      {!student.erasedAt && (
+        <Card title="Boletín de notas" className="mb-8">
+          <StudentReportCard studentId={student.id} />
+        </Card>
+      )}
+
+      {user?.role === 'admin' && !student.erasedAt && (
+        <GdprPanel
+          studentId={student.id}
+          name={`${student.firstName} ${student.lastName}`}
+          onErased={() => setReloadKey((k) => k + 1)}
+        />
+      )}
 
       {student.notes && (
         <Card title="Notas" className="mb-8">
