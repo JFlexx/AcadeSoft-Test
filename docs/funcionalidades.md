@@ -107,6 +107,15 @@ Al entrar, en el menú lateral hay estas secciones:
   Inglés B1»). Uno por falta y solo para clases recientes; las respuestas
   llegan al email de la academia.
 
+### 6b. Notas y boletines
+- **Evaluaciones por grupo** («1ª evaluación», «Examen Unit 3»): nota de 0 a 10
+  y/o comentario por alumno, con la media del grupo. Las pone el profesor desde
+  su app del móvil (solo en sus grupos) o la administración.
+- Las familias ven las notas en su **portal**.
+- **Boletín de notas en PDF** por alumno y periodo: notas y comentarios de cada
+  grupo, media y asistencia. Se descarga desde la ficha del alumno o se **envía
+  por email a todas las familias de un grupo** de una vez (con el PDF adjunto).
+
 ### 7. Facturación
 - Facturas manuales (un cobro suelto) o automáticas (ver Mensualidades).
 - **Matrícula**: cada grupo puede tener una matrícula (pago único). Al dar de
