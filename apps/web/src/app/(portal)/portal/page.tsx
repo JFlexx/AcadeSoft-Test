@@ -32,6 +32,11 @@ type PortalStudent = {
   enrollments: { group: { name: string; course: { name: string } } }[];
   invoices: PortalInvoice[];
   attendances: { status: AttendanceStatus; session: { scheduledAt: string } }[];
+  assessmentResults: {
+    score: string | null;
+    comment: string | null;
+    assessment: { name: string; date: string; group: { name: string } };
+  }[];
 };
 
 const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
@@ -196,6 +201,30 @@ function StudentCard({ student }: { student: PortalStudent }) {
                       </button>
                     )}
                   </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <h3 className="font-medium text-sm text-gray-700 mb-2">Notas</h3>
+          {student.assessmentResults.length === 0 ? (
+            <p className="text-sm text-gray-400">Todavía no hay notas.</p>
+          ) : (
+            <ul className="space-y-2">
+              {student.assessmentResults.map((r, i) => (
+                <li key={i} className="text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-gray-700">
+                      {r.assessment.name}
+                      <span className="text-gray-400"> · {r.assessment.group.name}</span>
+                    </span>
+                    {r.score != null && (
+                      <span className="font-semibold">{Number(r.score).toLocaleString('es-ES')}</span>
+                    )}
+                  </div>
+                  {r.comment && <p className="text-xs text-gray-500">{r.comment}</p>}
                 </li>
               ))}
             </ul>

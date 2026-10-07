@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CircleUser, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -10,6 +10,7 @@ import { homeFor } from '@/lib/home';
 /** Mobile-first shell of the teacher app: their classes and attendance only. */
 export default function TeacherLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isLoading, logout } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -66,6 +67,20 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
+        <nav className="max-w-2xl mx-auto px-4 flex gap-1 text-sm">
+          {[
+            { href: '/teacher', label: 'Clases', active: !pathname.startsWith('/teacher/grades') && !pathname.startsWith('/teacher/account') },
+            { href: '/teacher/grades', label: 'Notas', active: pathname.startsWith('/teacher/grades') },
+          ].map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              className={`px-3 py-2 border-b-2 ${t.active ? 'border-brand-600 text-brand-700 font-medium' : 'border-transparent text-gray-600'}`}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </nav>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-5">{children}</main>
     </div>

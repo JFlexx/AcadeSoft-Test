@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/empty-state';
 import { GroupSchedule } from '@/components/group-schedule';
 import { GroupWaitlist } from '@/components/group-waitlist';
 import { ChargeGroupPanel } from '@/components/charge-group-panel';
+import { GradesEditor } from '@/components/grades-editor';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -665,6 +666,11 @@ export default function GroupDetailPage() {
           />
         </section>
       )}
+
+      <section className="mt-10">
+        <h2 className="font-medium mb-3">Notas</h2>
+        <GradesEditor groupId={group.id} basePath="" />
+      </section>
 
       <section className="mt-10">
         <header className="flex items-center justify-between mb-3">
