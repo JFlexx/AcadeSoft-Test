@@ -43,6 +43,7 @@ export default function EnrollPage() {
   const [notFound, setNotFound] = useState(false);
   const [trialClasses, setTrialClasses] = useState(false);
   const [mode, setMode] = useState<'enroll' | 'trial'>('enroll');
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
@@ -77,6 +78,7 @@ export default function EnrollPage() {
     try {
       const chosen = groups.find((g) => g.id === form.groupId);
       const payload: Record<string, string | boolean> = {
+        acceptPrivacy,
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         groupId: form.groupId,
@@ -260,6 +262,24 @@ export default function EnrollPage() {
           </label>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
+
+
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              required
+              checked={acceptPrivacy}
+              onChange={(e) => setAcceptPrivacy(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              He leído la{' '}
+              <a href={`/enroll/${slug}/privacidad`} target="_blank" className="text-brand-700 underline">
+                política de privacidad
+              </a>{' '}
+              de {academy}.
+            </span>
+          </label>
 
           {chosenFull && (
             <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">

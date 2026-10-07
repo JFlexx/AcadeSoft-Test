@@ -42,6 +42,7 @@ export function TrialBookingForm({
   const [sessionId, setSessionId] = useState('');
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState<{ scheduledAt: string; groupName: string } | null>(null);
 
@@ -60,7 +61,8 @@ export function TrialBookingForm({
     setSubmitting(true);
     setError(null);
     try {
-      const payload: Record<string, string> = {
+      const payload: Record<string, string | boolean> = {
+        acceptPrivacy,
         sessionId,
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
@@ -192,6 +194,24 @@ export function TrialBookingForm({
               className="w-full border rounded px-2 py-1 text-sm"
             />
           </label>
+
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              required
+              checked={acceptPrivacy}
+              onChange={(e) => setAcceptPrivacy(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              He leído la{' '}
+              <a href={`/enroll/${slug}/privacidad`} target="_blank" className="text-brand-700 underline">
+                política de privacidad
+              </a>{' '}
+              de {academy}.
+            </span>
+          </label>
+
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={submitting} className="btn-primary w-full">
             {submitting ? 'Reservando…' : 'Reservar clase de prueba'}

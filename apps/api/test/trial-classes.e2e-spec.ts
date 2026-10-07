@@ -87,7 +87,7 @@ describe('Trial classes (e2e)', () => {
   const book = (sessionId: string, name = 'Ana') =>
     http()
       .post('/public/academy/acme/trial')
-      .send({
+      .send({ acceptPrivacy: true,
         sessionId,
         firstName: name,
         lastName: 'García',

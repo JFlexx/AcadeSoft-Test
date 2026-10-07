@@ -1,4 +1,5 @@
 import {
+  Equals,
   IsEmail,
   IsNotEmpty,
   IsString,
@@ -41,4 +42,8 @@ export class SignupDto {
   @MinLength(8)
   @MaxLength(200)
   password!: string;
+
+  /** Accepts the terms of service and the data processing agreement. */
+  @Equals(true, { message: 'Debes aceptar los términos y el contrato de encargado del tratamiento' })
+  acceptTerms!: boolean;
 }

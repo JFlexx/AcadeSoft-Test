@@ -37,7 +37,15 @@ export class PublicService {
   private async tenantBySlug(slug: string) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { slug },
-      select: { id: true, name: true, trialClassesEnabled: true },
+      select: {
+        id: true,
+        name: true,
+        trialClassesEnabled: true,
+        legalName: true,
+        taxId: true,
+        address: true,
+        contactEmail: true,
+      },
     });
     if (!tenant) throw new NotFoundException('Academia no encontrada');
     return tenant;
@@ -62,6 +70,13 @@ export class PublicService {
 
     return {
       academy: tenant.name,
+      // Who is responsible for the family's data (for the privacy policy).
+      controller: {
+        name: tenant.legalName ?? tenant.name,
+        taxId: tenant.taxId,
+        address: tenant.address,
+        contactEmail: tenant.contactEmail,
+      },
       trialClasses: tenant.trialClassesEnabled,
       groups: groups.map((g) => ({
         id: g.id,
@@ -301,6 +316,7 @@ export class PublicService {
         email: dto.email?.trim(),
         phone: dto.phone?.trim(),
         notes: notes?.trim() || undefined,
+        privacyAcceptedAt: new Date(),
       },
     });
 

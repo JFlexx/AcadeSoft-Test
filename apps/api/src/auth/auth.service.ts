@@ -54,7 +54,7 @@ export class AuthService {
     try {
       const result = await this.prisma.$transaction(async (tx) => {
         const tenant = await tx.tenant.create({
-          data: { slug: dto.tenantSlug, name: dto.tenantName },
+          data: { slug: dto.tenantSlug, name: dto.tenantName, termsAcceptedAt: new Date() },
         });
         const user = await tx.user.create({
           data: {

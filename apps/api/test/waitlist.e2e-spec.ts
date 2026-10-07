@@ -70,7 +70,7 @@ describe('Waiting list (e2e)', () => {
   function apply(groupId: string, extra: Record<string, unknown> = {}, name = 'Ana') {
     return http()
       .post('/public/academy/acme/enroll')
-      .send({
+      .send({ acceptPrivacy: true,
         firstName: name,
         lastName: 'García',
         groupId,
@@ -144,7 +144,7 @@ describe('Waiting list (e2e)', () => {
 
     const noEmail = await http()
       .post('/public/academy/acme/enroll')
-      .send({ firstName: 'Sin', lastName: 'Email', groupId: fullGroup, waitlist: true })
+      .send({ acceptPrivacy: true, firstName: 'Sin', lastName: 'Email', groupId: fullGroup, waitlist: true })
       .expect(201);
     const res = await http()
       .post(`/enrollments/${noEmail.body.enrollmentId}/offer-spot`)

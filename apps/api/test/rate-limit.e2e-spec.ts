@@ -63,7 +63,7 @@ describe('Rate limiting (e2e)', () => {
     for (let i = 0; i < 3; i++) {
       await http()
         .post('/auth/signup')
-        .send({
+        .send({ acceptTerms: true,
           ...base,
           tenantSlug: `academy-${i}`,
           email: `jane${i}@academy.local`,
@@ -73,7 +73,7 @@ describe('Rate limiting (e2e)', () => {
     // 4th within the hour is blocked, regardless of payload validity.
     await http()
       .post('/auth/signup')
-      .send({
+      .send({ acceptTerms: true,
         ...base,
         tenantSlug: 'academy-3',
         email: 'jane3@academy.local',
