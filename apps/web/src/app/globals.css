@@ -11,3 +11,32 @@
     @apply inline-flex items-center justify-center gap-1.5 bg-white text-gray-700 text-sm font-medium px-3 py-2 rounded-md border border-gray-300 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
   }
 }
+
+/* Admin app on phones and tablets: wide tables scroll sideways instead of
+   squeezing every column, and pages use a tighter gutter. */
+@media (max-width: 1023px) {
+  .app-main table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .app-main th,
+  .app-main td {
+    white-space: nowrap;
+    padding-right: 0.75rem;
+  }
+  .app-main > div.p-6 {
+    padding: 1rem;
+  }
+  /* Page headings: title on one line, actions wrap below instead of
+     squeezing (buttons keep their text on one line). */
+  .app-main header.justify-between,
+  .app-main header.justify-between > div {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .app-main .btn-primary,
+  .app-main .btn-secondary {
+    white-space: nowrap;
+  }
+}
