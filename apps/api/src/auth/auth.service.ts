@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -13,7 +12,6 @@ import { createHash, randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
 import { SignupDto } from './dto/signup.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -83,33 +81,6 @@ export class AuthService {
     }
 
     return this.issueTokens(userId, tenantId, role.name);
-  }
-
-  async register(dto: RegisterDto) {
-    const tenant = await this.prisma.tenant.findUnique({ where: { slug: dto.tenantSlug } });
-    if (!tenant) throw new NotFoundException('Tenant not found');
-
-    const role = await this.prisma.role.findUnique({ where: { name: dto.roleName } });
-    if (!role) throw new NotFoundException('Role not found');
-
-    const existing = await this.prisma.user.findUnique({
-      where: { tenantId_email: { tenantId: tenant.id, email: dto.email } },
-    });
-    if (existing) throw new ConflictException('Email already registered for this tenant');
-
-    const passwordHash = await argon2.hash(dto.password);
-    const user = await this.prisma.user.create({
-      data: {
-        tenantId: tenant.id,
-        roleId: role.id,
-        email: dto.email,
-        passwordHash,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-      },
-    });
-
-    return this.issueTokens(user.id, tenant.id, role.name);
   }
 
   async login(dto: LoginDto) {

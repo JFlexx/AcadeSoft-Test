@@ -110,4 +110,22 @@ describe('Auth (e2e)', () => {
   it('rejects /users/me without bearer with 401', async () => {
     await http().get('/users/me').expect(401);
   });
+
+  // Regression: a public /auth/register used to accept any role, so anyone
+  // knowing an academy's (public) slug could make themselves its admin.
+  // Users are created only by signup (new academy) or by an admin.
+  it('there is no public way to add a user to an existing academy', async () => {
+    await http()
+      .post('/auth/register')
+      .send({
+        tenantSlug: TENANT_SLUG,
+        email: 'intruder@evil.test',
+        password: 'Password123!',
+        firstName: 'X',
+        lastName: 'Y',
+        roleName: 'admin',
+      })
+      .expect(404);
+    expect(await prisma.user.findFirst({ where: { email: 'intruder@evil.test' } })).toBeNull();
+  });
 });
