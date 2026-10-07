@@ -217,6 +217,21 @@ manipular. AcadeSoft lo cumple así, **de forma transparente para el usuario**:
   profesores ni gestionar el equipo.
 - **Profesores** (app del móvil) y **familias** (portal), cada uno solo con lo suyo.
 
+### 14c. Protección de datos (RGPD)
+- **Derechos de las familias**: desde la ficha del alumno, la administración
+  **descarga todos sus datos** (acceso y portabilidad) o los **suprime**
+  (derecho al olvido). Si tiene facturas, se conservan con su nombre y
+  dirección, como exige la ley; todo lo demás se borra. Queda registrado.
+- **Las facturas nunca se pierden**: un alumno con facturas no se puede borrar
+  (obligación legal de conservarlas y cadena Veri*Factu).
+- **Consentimiento**: la inscripción online y la clase de prueba piden aceptar
+  la política de privacidad de la academia (se guarda la fecha); el alta de una
+  academia, los términos y el contrato de encargado del tratamiento.
+- **Textos legales** (borradores pendientes de revisión legal): política de
+  privacidad de cada academia generada con sus datos, términos del servicio,
+  privacidad de la plataforma y contrato de encargado (art. 28 RGPD). Solo se
+  usa una cookie técnica: no hace falta banner de cookies.
+
 ### 15. Portal de familias
 - Cada familia puede tener su **propio acceso** para ver, en modo consulta, la
   información de sus hijos: **grupos, facturas y asistencia**.
@@ -276,6 +291,8 @@ Somos honestos sobre lo que falta:
 - **Envío automático a la Agencia Tributaria** de los registros Veri\*Factu (la
   app ya genera la huella y el QR; el envío en tiempo real requiere el
   certificado digital de una academia real ya en producción).
+- **Revisión legal** de los textos (son borradores) y **datos de la empresa
+  titular** de la plataforma.
 - **Suscripción de calendario en vivo** (hoy el calendario se exporta como
   archivo; una suscripción que se actualice sola es un paso posterior).
 
