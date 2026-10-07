@@ -15,6 +15,11 @@ export class UpdateSessionDto {
   @IsString()
   teacherId?: string;
 
+  /** Room for this class only (overrides the group's); null clears it. */
+  @IsOptional()
+  @IsString()
+  roomId?: string | null;
+
   @IsOptional()
   @IsDateString()
   scheduledAt?: string;

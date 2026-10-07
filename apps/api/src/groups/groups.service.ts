@@ -11,19 +11,20 @@ export class GroupsService {
   async create(tenantId: string, dto: CreateGroupDto) {
     await this.ensureCourseInTenant(tenantId, dto.courseId);
     if (dto.teacherId) await this.ensureTeacherInTenant(tenantId, dto.teacherId);
+    if (dto.roomId) await this.ensureRoomInTenant(tenantId, dto.roomId);
 
     const data: Prisma.GroupUncheckedCreateInput = {
       tenantId,
       courseId: dto.courseId,
       teacherId: dto.teacherId,
+      roomId: dto.roomId,
       name: dto.name,
       description: dto.description,
       schedule: dto.schedule as Prisma.InputJsonValue | undefined,
       startDate: dto.startDate ? new Date(dto.startDate) : undefined,
       endDate: dto.endDate ? new Date(dto.endDate) : undefined,
       maxCapacity: dto.maxCapacity,
-      monthlyFee:
-        dto.monthlyFee !== undefined ? new Prisma.Decimal(dto.monthlyFee) : undefined,
+      monthlyFee: dto.monthlyFee !== undefined ? new Prisma.Decimal(dto.monthlyFee) : undefined,
       enrollmentFee:
         dto.enrollmentFee === undefined
           ? undefined
@@ -53,18 +54,19 @@ export class GroupsService {
     await this.findOne(tenantId, id);
     if (dto.courseId) await this.ensureCourseInTenant(tenantId, dto.courseId);
     if (dto.teacherId) await this.ensureTeacherInTenant(tenantId, dto.teacherId);
+    if (dto.roomId) await this.ensureRoomInTenant(tenantId, dto.roomId);
 
     const data: Prisma.GroupUncheckedUpdateInput = {
       courseId: dto.courseId,
       teacherId: dto.teacherId,
+      roomId: dto.roomId,
       name: dto.name,
       description: dto.description,
       schedule: dto.schedule as Prisma.InputJsonValue | undefined,
       startDate: dto.startDate ? new Date(dto.startDate) : undefined,
       endDate: dto.endDate ? new Date(dto.endDate) : undefined,
       maxCapacity: dto.maxCapacity,
-      monthlyFee:
-        dto.monthlyFee !== undefined ? new Prisma.Decimal(dto.monthlyFee) : undefined,
+      monthlyFee: dto.monthlyFee !== undefined ? new Prisma.Decimal(dto.monthlyFee) : undefined,
       enrollmentFee:
         dto.enrollmentFee === undefined
           ? undefined
@@ -95,5 +97,13 @@ export class GroupsService {
       select: { id: true },
     });
     if (!teacher) throw new BadRequestException('Teacher not found in tenant');
+  }
+
+  private async ensureRoomInTenant(tenantId: string, roomId: string): Promise<void> {
+    const room = await this.prisma.room.findFirst({
+      where: { id: roomId, tenantId },
+      select: { id: true },
+    });
+    if (!room) throw new BadRequestException('Aula no encontrada');
   }
 }

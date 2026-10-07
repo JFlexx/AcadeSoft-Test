@@ -12,6 +12,7 @@ export class SessionsService {
   async create(tenantId: string, dto: CreateSessionDto) {
     await this.ensureGroupInTenant(tenantId, dto.groupId);
     if (dto.teacherId) await this.ensureTeacherInTenant(tenantId, dto.teacherId);
+    if (dto.roomId) await this.ensureRoomInTenant(tenantId, dto.roomId);
 
     const data: Prisma.SessionUncheckedCreateInput = {
       tenantId,
@@ -19,6 +20,7 @@ export class SessionsService {
       teacherId: dto.teacherId,
       scheduledAt: new Date(dto.scheduledAt),
       durationMinutes: dto.durationMinutes,
+      roomId: dto.roomId,
       status: dto.status,
       notes: dto.notes,
     };
@@ -54,11 +56,13 @@ export class SessionsService {
   async update(tenantId: string, id: string, dto: UpdateSessionDto) {
     await this.findOne(tenantId, id);
     if (dto.teacherId) await this.ensureTeacherInTenant(tenantId, dto.teacherId);
+    if (dto.roomId) await this.ensureRoomInTenant(tenantId, dto.roomId);
 
     const data: Prisma.SessionUncheckedUpdateInput = {
       teacherId: dto.teacherId,
       scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : undefined,
       durationMinutes: dto.durationMinutes,
+      roomId: dto.roomId,
       startedAt: dto.startedAt ? new Date(dto.startedAt) : undefined,
       endedAt: dto.endedAt ? new Date(dto.endedAt) : undefined,
       status: dto.status,
@@ -86,5 +90,13 @@ export class SessionsService {
       select: { id: true },
     });
     if (!teacher) throw new BadRequestException('Teacher not found in tenant');
+  }
+
+  private async ensureRoomInTenant(tenantId: string, roomId: string): Promise<void> {
+    const room = await this.prisma.room.findFirst({
+      where: { id: roomId, tenantId },
+      select: { id: true },
+    });
+    if (!room) throw new BadRequestException('Aula no encontrada');
   }
 }

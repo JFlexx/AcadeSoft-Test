@@ -20,6 +20,11 @@ export class CreateSessionDto {
   @IsString()
   teacherId?: string;
 
+  /** Room for this class only (overrides the group's); null clears it. */
+  @IsOptional()
+  @IsString()
+  roomId?: string | null;
+
   @IsDateString()
   scheduledAt!: string;
 
