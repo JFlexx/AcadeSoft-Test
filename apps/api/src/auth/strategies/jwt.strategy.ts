@@ -8,6 +8,8 @@ export interface AuthenticatedUser {
   userId: string;
   tenantId: string;
   role: string;
+  /** The signed-in device (AuthSession id); absent on tokens issued before sessions existed. */
+  sessionId?: string;
 }
 
 @Injectable()
@@ -21,6 +23,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   validate(payload: JwtPayload): AuthenticatedUser {
-    return { userId: payload.sub, tenantId: payload.tenantId, role: payload.role };
+    return {
+      userId: payload.sub,
+      tenantId: payload.tenantId,
+      role: payload.role,
+      sessionId: payload.sid,
+    };
   }
 }

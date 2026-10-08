@@ -168,7 +168,6 @@ model User {
   firstName    String
   lastName     String
   status       UserStatus @default(ACTIVE)
-  refreshToken String?
   passwordResetTokenHash String?   @unique
   passwordResetExpiresAt DateTime?
   lastLoginAt  DateTime?
@@ -180,10 +179,34 @@ model User {
   auditLogs     AuditLog[]
   guardianLinks Guardian[]
   teacherProfile Teacher?
+  sessions      AuthSession[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
   @@map("users")
+}
+
+/// One signed-in device (browser). Refresh tokens rotate per session, so a
+/// user can be signed in on the computer and the phone at once.
+model AuthSession {
+  id           String    @id @default(cuid())
+  userId       String
+  /// SHA-256 of the current refresh token.
+  tokenHash    String
+  /// The token it replaced: still accepted for a few seconds so two tabs
+  /// refreshing at once don't sign each other out; after that it means reuse.
+  previousHash String?
+  rotatedAt    DateTime?
+  expiresAt    DateTime
+  /// Browser description, to tell sessions apart.
+  userAgent    String?
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
 }
 
 // ─── Student & Guardian ───────────────────────────────────────────────────────

@@ -22,6 +22,8 @@ export interface JwtPayload {
   sub: string;
   tenantId: string;
   role: string;
+  /** The signed-in device (AuthSession id). */
+  sid?: string;
 }
 
 @Injectable()
@@ -36,11 +38,14 @@ export class AuthService {
   /** Reset links expire after this many minutes. */
   static readonly RESET_TTL_MINUTES = 60;
 
+  /** How long a just-replaced refresh token is still accepted (two tabs at once). */
+  static readonly ROTATION_GRACE_MS = 30_000;
+
   private static hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
 
-  async signup(dto: SignupDto) {
+  async signup(dto: SignupDto, userAgent?: string) {
     const role = await this.prisma.role.upsert({
       where: { name: 'admin' },
       update: {},
@@ -80,10 +85,10 @@ export class AuthService {
       throw err;
     }
 
-    return this.issueTokens(userId, tenantId, role.name);
+    return this.startSession(userId, tenantId, role.name, userAgent);
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, userAgent?: string) {
     const tenant = await this.prisma.tenant.findUnique({ where: { slug: dto.tenantSlug } });
     if (!tenant) throw new UnauthorizedException();
 
@@ -101,29 +106,76 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    return this.issueTokens(user.id, user.tenantId, user.role.name);
+    return this.startSession(user.id, user.tenantId, user.role.name, userAgent);
   }
 
-  async refresh(userId: string, presentedToken: string | undefined) {
-    if (!presentedToken) throw new UnauthorizedException();
+  /**
+   * Rotates this device's refresh token (standard rotation with reuse
+   * detection). The token it replaced stays valid for a few seconds without
+   * rotating again, so two tabs refreshing at once both get through; it then
+   * returns no refresh token and the browser keeps the newer cookie. Any
+   * older token showing up later means it was copied: the session ends.
+   */
+  async refresh(
+    userId: string,
+    sessionId: string | undefined,
+    presentedToken: string | undefined,
+  ): Promise<{ accessToken: string; refreshToken: string | null }> {
+    if (!presentedToken || !sessionId) throw new UnauthorizedException();
+    const hash = AuthService.hashToken(presentedToken);
+    const now = new Date();
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { role: true },
-    });
-    if (!user || !user.refreshToken) throw new UnauthorizedException();
+    const load = () =>
+      this.prisma.authSession.findUnique({
+        where: { id: sessionId },
+        include: { user: { include: { role: true } } },
+      });
+    let session = await load();
+    if (!session || session.userId !== userId || session.expiresAt <= now) {
+      throw new UnauthorizedException();
+    }
+    const { user } = session;
 
-    const matches = await argon2.verify(user.refreshToken, presentedToken);
-    if (!matches) throw new UnauthorizedException();
+    if (session.tokenHash === hash) {
+      const tokens = await this.signTokens(user.id, user.tenantId, user.role.name, session.id);
+      // Compare-and-swap: only one of two simultaneous refreshes rotates.
+      const { count } = await this.prisma.authSession.updateMany({
+        where: { id: session.id, tokenHash: hash },
+        data: {
+          tokenHash: AuthService.hashToken(tokens.refreshToken),
+          previousHash: hash,
+          rotatedAt: now,
+          lastUsedAt: now,
+          expiresAt: this.expiryOf(tokens.refreshToken),
+        },
+      });
+      if (count === 1) return tokens;
+      session = await load();
+      if (!session) throw new UnauthorizedException();
+    }
 
-    return this.issueTokens(user.id, user.tenantId, user.role.name);
+    const justRotated =
+      session.previousHash === hash &&
+      session.rotatedAt !== null &&
+      now.getTime() - session.rotatedAt.getTime() <= AuthService.ROTATION_GRACE_MS;
+    if (justRotated) {
+      const { accessToken } = await this.signTokens(
+        user.id,
+        user.tenantId,
+        user.role.name,
+        session.id,
+      );
+      return { accessToken, refreshToken: null };
+    }
+
+    await this.prisma.authSession.deleteMany({ where: { id: session.id } });
+    throw new UnauthorizedException();
   }
 
-  async logout(userId: string) {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { refreshToken: null },
-    });
+  /** Signs out this device only. */
+  async logout(userId: string, sessionId: string | undefined) {
+    if (!sessionId) return;
+    await this.prisma.authSession.deleteMany({ where: { id: sessionId, userId } });
   }
 
   /**
@@ -188,17 +240,17 @@ export class AuthService {
         passwordHash: await argon2.hash(dto.password),
         passwordResetTokenHash: null,
         passwordResetExpiresAt: null,
-        refreshToken: null,
+        sessions: { deleteMany: {} },
       },
     });
   }
 
   /**
-   * Changes the signed-in user's password. Rotates the refresh token, so other
-   * sessions are signed out while this one continues. A wrong current password
-   * is a 400 (not 401) so the client does not treat it as an expired session.
+   * Changes the signed-in user's password. Every device is signed out and this
+   * one gets a fresh session, so it continues. A wrong current password is a
+   * 400 (not 401) so the client does not treat it as an expired session.
    */
-  async changePassword(userId: string, dto: ChangePasswordDto) {
+  async changePassword(userId: string, dto: ChangePasswordDto, userAgent?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { role: true },
@@ -213,13 +265,39 @@ export class AuthService {
         passwordHash: await argon2.hash(dto.newPassword),
         passwordResetTokenHash: null,
         passwordResetExpiresAt: null,
+        sessions: { deleteMany: {} },
       },
     });
-    return this.issueTokens(user.id, user.tenantId, user.role.name);
+    return this.startSession(user.id, user.tenantId, user.role.name, userAgent);
   }
 
-  private async issueTokens(userId: string, tenantId: string, role: string) {
-    const payload: JwtPayload = { sub: userId, tenantId, role };
+  /** A new signed-in device: its own session row and tokens. */
+  private async startSession(userId: string, tenantId: string, role: string, userAgent?: string) {
+    const now = new Date();
+    // Expired sessions of this user are no longer useful to anyone.
+    await this.prisma.authSession.deleteMany({ where: { userId, expiresAt: { lte: now } } });
+    const sessionId = randomUUID();
+    const tokens = await this.signTokens(userId, tenantId, role, sessionId);
+    await this.prisma.authSession.create({
+      data: {
+        id: sessionId,
+        userId,
+        tokenHash: AuthService.hashToken(tokens.refreshToken),
+        expiresAt: this.expiryOf(tokens.refreshToken),
+        userAgent: userAgent?.slice(0, 300) ?? null,
+      },
+    });
+    return tokens;
+  }
+
+  /** When a signed token expires (its `exp` claim). */
+  private expiryOf(token: string): Date {
+    const { exp } = this.jwt.decode(token) as { exp: number };
+    return new Date(exp * 1000);
+  }
+
+  private async signTokens(userId: string, tenantId: string, role: string, sessionId: string) {
+    const payload: JwtPayload = { sub: userId, tenantId, role, sid: sessionId };
 
     const accessToken = await this.jwt.signAsync(payload, {
       secret: this.config.get<string>('JWT_ACCESS_SECRET'),
@@ -233,12 +311,6 @@ export class AuthService {
       secret: this.config.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.config.get<string>('JWT_REFRESH_EXPIRES_IN'),
       jwtid: randomUUID(),
-    });
-
-    const refreshHash = await argon2.hash(refreshToken);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { refreshToken: refreshHash },
     });
 
     return { accessToken, refreshToken };
