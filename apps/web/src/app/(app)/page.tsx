@@ -2,16 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  Users,
-  Receipt,
-  CalendarDays,
-  LayoutDashboard,
-  Inbox,
-  type LucideIcon,
-} from 'lucide-react';
+import { Users, Receipt, CalendarDays, LayoutDashboard, type LucideIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { TodayPanel, type PendingRequest, type Today } from '@/components/today-panel';
 
 type Student = { id: string; firstName: string; lastName: string; isActive: boolean };
 type Group = {
@@ -53,12 +47,6 @@ type PendingPayment = {
   pending: number;
   issueDate: string;
 };
-type PendingRequest = {
-  id: string;
-  studentName: string;
-  groupName: string;
-  groupId: string;
-};
 type Occupancy = {
   groupId: string;
   name: string;
@@ -99,19 +87,23 @@ function endOfWeek(): Date {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [data, setData] = useState<Data | null>(null);
+  const [today, setToday] = useState<Today | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [students, groups, invoices, sessions, enrollments] =
+        const [students, groups, invoices, sessions, enrollments, todayData] =
           await Promise.all([
             api<Student[]>('/students'),
             api<Group[]>('/groups'),
             api<Invoice[]>('/invoices'),
             api<Session[]>('/sessions'),
             api<Enrollment[]>('/enrollments'),
+            // The to-do list is a bonus: the numbers still show if it fails.
+            api<Today>('/reports/today').catch(() => null),
           ]);
+        setToday(todayData);
 
         const monthStart = startOfMonth();
         const weekStart = startOfWeek();
@@ -228,6 +220,8 @@ export default function DashboardPage() {
         </div>
       ) : data ? (
         <>
+          {today && <TodayPanel today={today} requests={data.pendingRequests} />}
+
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 mb-8">
             <StatCard icon={Users} label="Alumnos activos" value={data.stats.activeStudents} href="/students" />
             <StatCard icon={LayoutDashboard} label="Grupos activos" value={data.stats.activeGroups} href="/groups" />
@@ -272,71 +266,41 @@ export default function DashboardPage() {
               )}
             </Panel>
 
-            <Panel
-              title="Solicitudes de inscripción"
-              subtitle={
-                data.pendingRequests.length > 0
-                  ? `${data.pendingRequests.length} pendiente(s) de aprobar`
-                  : undefined
-              }
-              icon={Inbox}
-            >
-              {data.pendingRequests.length === 0 ? (
-                <Empty>Sin solicitudes nuevas.</Empty>
-              ) : (
-                <ul className="divide-y">
-                  {data.pendingRequests.slice(0, 6).map((r) => (
-                    <li key={r.id}>
+            {data.occupancy.length > 0 && (
+              <div className="border rounded-xl p-5 bg-white">
+                <h2 className="font-medium text-sm text-gray-700 mb-3">
+                  Ocupación de grupos
+                </h2>
+                <div className="space-y-2.5">
+                  {data.occupancy.map((o) => {
+                    const pct = Math.round((o.active / o.capacity) * 100);
+                    const full = o.active >= o.capacity;
+                    return (
                       <Link
-                        href={`/groups/${r.groupId}`}
-                        className="flex items-center justify-between py-2 text-sm hover:bg-gray-50 -mx-2 px-2 rounded"
+                        key={o.groupId}
+                        href={`/groups/${o.groupId}`}
+                        className="block group"
                       >
-                        <span className="min-w-0 truncate">{r.studentName}</span>
-                        <span className="text-xs text-gray-500 shrink-0">
-                          {r.groupName}
-                        </span>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="group-hover:text-brand-700">{o.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {o.active}/{o.capacity}
+                            {full && ' · completo'}
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${full ? 'bg-red-400' : pct >= 70 ? 'bg-amber-400' : 'bg-brand-500'}`}
+                            style={{ width: `${Math.min(100, pct)}%` }}
+                          />
+                        </div>
                       </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
-          </div>
-
-          {data.occupancy.length > 0 && (
-            <div className="border rounded-xl p-5 bg-white mb-8">
-              <h2 className="font-medium text-sm text-gray-700 mb-3">
-                Ocupación de grupos
-              </h2>
-              <div className="space-y-2.5">
-                {data.occupancy.map((o) => {
-                  const pct = Math.round((o.active / o.capacity) * 100);
-                  const full = o.active >= o.capacity;
-                  return (
-                    <Link
-                      key={o.groupId}
-                      href={`/groups/${o.groupId}`}
-                      className="block group"
-                    >
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="group-hover:text-brand-700">{o.name}</span>
-                        <span className="text-xs text-gray-500">
-                          {o.active}/{o.capacity}
-                          {full && ' · completo'}
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${full ? 'bg-red-400' : pct >= 70 ? 'bg-amber-400' : 'bg-brand-500'}`}
-                          style={{ width: `${Math.min(100, pct)}%` }}
-                        />
-                      </div>
-                    </Link>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="border rounded-xl p-5 bg-white">
             <h2 className="font-medium text-sm text-gray-700 mb-3">Accesos rápidos</h2>
