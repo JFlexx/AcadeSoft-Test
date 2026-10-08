@@ -39,7 +39,23 @@ async function rawRequest(path: string, options: ApiOptions): Promise<Response> 
   });
 }
 
-async function tryRefresh(): Promise<boolean> {
+let refreshing: Promise<boolean> | null = null;
+
+/**
+ * One refresh at a time. The server rotates the refresh token on every call,
+ * so when several requests hit an expired access token at once (the home
+ * screen fires six) their refreshes raced, and whichever lost left the
+ * browser with a token the server no longer accepted: the user was logged
+ * out. Concurrent callers now share the same refresh.
+ */
+function tryRefresh(): Promise<boolean> {
+  refreshing ??= refreshOnce().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
+async function refreshOnce(): Promise<boolean> {
   const res = await fetch(`${API_URL}/auth/refresh`, {
     method: 'POST',
     credentials: 'include',
