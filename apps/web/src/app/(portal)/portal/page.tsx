@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
+import { formatDate, formatEur } from '@/lib/format';
 import { api, ApiError } from '@/lib/api';
 
 type InvoiceStatus =
@@ -70,17 +71,6 @@ const ATTENDANCE_STYLE: Record<AttendanceStatus, string> = {
   LATE: 'text-amber-700',
   EXCUSED: 'text-blue-700',
 };
-
-function formatEur(value: string | number): string {
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(Number(value));
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-ES');
-}
 
 export default function PortalPage() {
   const { user } = useAuth();

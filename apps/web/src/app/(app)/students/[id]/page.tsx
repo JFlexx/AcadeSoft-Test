@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Users2, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatDate, formatEur } from '@/lib/format';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { EmptyState } from '@/components/empty-state';
@@ -89,18 +90,6 @@ const INVOICE_STATUS_STYLE: Record<InvoiceStatus, string> = {
   OVERDUE: 'bg-red-50 text-red-700',
   CANCELLED: 'bg-gray-100 text-gray-500 line-through',
 };
-
-function formatEur(value: string | number): string {
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(Number(value));
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-ES');
-}
 
 export default function StudentDetailPage() {
   const params = useParams<{ id: string }>();
@@ -213,7 +202,7 @@ export default function StudentDetailPage() {
 
       {student.erasedAt && (
         <p className="mb-6 text-sm rounded-lg border border-amber-200 bg-amber-50 text-amber-900 px-3 py-2">
-          Datos personales suprimidos el {new Date(student.erasedAt).toLocaleDateString('es-ES')}{' '}
+          Datos personales suprimidos el {formatDate(student.erasedAt)}{' '}
           (RGPD). Solo se conservan el nombre y la dirección de sus facturas, como exige la ley.
         </p>
       )}

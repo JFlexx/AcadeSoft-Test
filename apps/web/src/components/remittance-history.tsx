@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { formatDate, formatEur } from '@/lib/format';
 import { api, apiBlob, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 
@@ -41,9 +42,8 @@ const REASONS = [
   'MS02 — Motivo no especificado por el titular',
 ];
 
-const eur = (v: string | number) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(Number(v));
-const day = (iso: string) => new Date(iso).toLocaleDateString('es-ES');
+const eur = formatEur;
+const day = formatDate;
 const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : 'Error de red');
 
 /**

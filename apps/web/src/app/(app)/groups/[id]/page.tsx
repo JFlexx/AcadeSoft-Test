@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Users, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatDate, formatDay } from '@/lib/format';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { announceEnrollmentFee, askChargeEnrollmentFee } from '@/lib/enrollment-fee';
@@ -472,9 +473,9 @@ export default function GroupDetailPage() {
             </span>
             <span className="text-gray-500">Periodo</span>
             <span>
-              {group.startDate ? group.startDate.slice(0, 10) : '—'}
+              {formatDay(group.startDate)}
               {' → '}
-              {group.endDate ? group.endDate.slice(0, 10) : '—'}
+              {formatDay(group.endDate)}
             </span>
             <span className="text-gray-500">Cuota mensual</span>
             <span>
@@ -630,7 +631,7 @@ export default function GroupDetailPage() {
                             )}
                           </select>
                         </td>
-                        <td className="py-2 text-gray-600">{e.enrolledAt.slice(0, 10)}</td>
+                        <td className="py-2 text-gray-600">{formatDate(e.enrolledAt)}</td>
                         <td className="py-2">
                           <div className="flex items-center gap-2">
                             <input

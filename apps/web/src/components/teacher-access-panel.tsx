@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/format';
 import { api, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { useAuth } from '@/lib/auth-context';
@@ -89,7 +90,7 @@ export function TeacherAccessPanel({
             Entra como <strong>{access.email}</strong>
             <span className="block text-xs text-gray-500">
               {access.lastLoginAt
-                ? `Último acceso: ${new Date(access.lastLoginAt).toLocaleString('es-ES')}`
+                ? `Último acceso: ${formatDateTime(access.lastLoginAt)}`
                 : 'Todavía no ha entrado'}
             </span>
           </span>

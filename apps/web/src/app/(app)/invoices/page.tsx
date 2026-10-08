@@ -3,17 +3,13 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Receipt, Download } from 'lucide-react';
+import { formatDate, formatEur } from '@/lib/format';
 import { api, ApiError } from '@/lib/api';
 import { EmptyState } from '@/components/empty-state';
 import { downloadCsv, csvAmount } from '@/lib/csv';
+import { matches, Pager, SearchBox, usePaged } from '@/components/list-controls';
 
-type InvoiceStatus =
-  | 'DRAFT'
-  | 'PENDING'
-  | 'PARTIAL'
-  | 'PAID'
-  | 'OVERDUE'
-  | 'CANCELLED';
+type InvoiceStatus = 'DRAFT' | 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'CANCELLED';
 
 type InvoiceType = 'ORIGINAL' | 'RECTIFICATIVA';
 
@@ -66,24 +62,12 @@ const EMPTY_FORM = {
   dueDate: '',
 };
 
-function formatEur(value: string | number): string {
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(Number(value));
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-ES');
-}
-
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<'' | InvoiceStatus>('');
-  const [filterStudent, setFilterStudent] = useState<string>('');
+  const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
@@ -107,16 +91,18 @@ export default function InvoicesPage() {
     refresh();
   }, []);
 
-  const studentById = useMemo(
-    () => Object.fromEntries(students.map((s) => [s.id, s])),
-    [students],
-  );
+  const studentById = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s])), [students]);
 
-  const filtered = invoices.filter((i) => {
-    if (filterStatus && i.status !== filterStatus) return false;
-    if (filterStudent && i.studentId !== filterStudent) return false;
-    return true;
-  });
+  const filtered = useMemo(
+    () =>
+      invoices.filter((i) => {
+        if (filterStatus && i.status !== filterStatus) return false;
+        const st = studentById[i.studentId];
+        return matches(query, i.number, i.description, st?.firstName, st?.lastName);
+      }),
+    [invoices, studentById, filterStatus, query],
+  );
+  const paged = usePaged(filtered, `${query}|${filterStatus}`);
 
   const totals = useMemo(() => {
     let billed = 0;
@@ -157,13 +143,12 @@ export default function InvoicesPage() {
     ];
     const rows = filtered.map((i) => {
       const s = studentById[i.studentId];
-      const pending =
-        i.status === 'CANCELLED' ? 0 : Number(i.amount) - Number(i.paidAmount);
+      const pending = i.status === 'CANCELLED' ? 0 : Number(i.amount) - Number(i.paidAmount);
       return [
         i.number,
         s ? `${s.firstName} ${s.lastName}` : '',
         i.description ?? '',
-        formatDate(i.issueDate),
+        new Date(i.issueDate).toLocaleDateString('es-ES'),
         csvAmount(i.amount),
         csvAmount(i.paidAmount),
         csvAmount(pending),
@@ -171,11 +156,7 @@ export default function InvoicesPage() {
         i.type === 'RECTIFICATIVA' ? 'Rectificativa' : 'Original',
       ];
     });
-    downloadCsv(
-      `facturas-${new Date().toISOString().slice(0, 10)}.csv`,
-      headers,
-      rows,
-    );
+    downloadCsv(`facturas-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -228,12 +209,9 @@ export default function InvoicesPage() {
       </header>
 
       {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="border rounded p-4 mb-6 space-y-3 bg-gray-50"
-        >
+        <form onSubmit={handleSubmit} className="border rounded p-4 mb-6 space-y-3 bg-gray-50">
           <h2 className="font-medium">Nueva factura</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="block">
               <span className="text-xs text-gray-600 block mb-1">Alumno *</span>
               <select
@@ -264,7 +242,7 @@ export default function InvoicesPage() {
                 className="w-full border rounded px-2 py-1 text-sm"
               />
             </label>
-            <label className="block col-span-2">
+            <label className="block sm:col-span-2">
               <span className="text-xs text-gray-600 block mb-1">Concepto</span>
               <input
                 type="text"
@@ -296,13 +274,9 @@ export default function InvoicesPage() {
         </form>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
         <SummaryCard label="Facturado" value={formatEur(totals.billed)} />
-        <SummaryCard
-          label="Cobrado"
-          value={formatEur(totals.collected)}
-          tone="green"
-        />
+        <SummaryCard label="Cobrado" value={formatEur(totals.collected)} tone="green" />
         <SummaryCard
           label="Pendiente"
           value={formatEur(totals.pending)}
@@ -310,38 +284,29 @@ export default function InvoicesPage() {
         />
       </div>
 
-      <div className="mb-3 flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-600">Estado:</label>
-          <select
-            value={filterStatus}
-            onChange={(e) =>
-              setFilterStatus(e.target.value as '' | InvoiceStatus)
-            }
-            className="border rounded px-2 py-1 text-sm bg-white"
-          >
-            {STATUS_FILTERS.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-600">Alumno:</label>
-          <select
-            value={filterStudent}
-            onChange={(e) => setFilterStudent(e.target.value)}
-            className="border rounded px-2 py-1 text-sm bg-white"
-          >
-            <option value="">Todos</option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.firstName} {s.lastName}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          placeholder="Buscar por nº, alumno o concepto"
+        />
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as '' | InvoiceStatus)}
+          className="border rounded-md px-2 py-1.5 text-sm bg-white"
+          aria-label="Estado"
+        >
+          {STATUS_FILTERS.map((f) => (
+            <option key={f.value} value={f.value}>
+              {f.value ? f.label : 'Todos los estados'}
+            </option>
+          ))}
+        </select>
+        <span className="text-sm text-gray-500 sm:ml-auto">
+          {filtered.length === invoices.length
+            ? `${invoices.length} facturas`
+            : `${filtered.length} de ${invoices.length} facturas`}
+        </span>
       </div>
 
       {loading ? (
@@ -370,68 +335,94 @@ export default function InvoicesPage() {
           }
         />
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-gray-500">
-          No hay facturas que coincidan con los filtros.
-        </p>
+        <p className="text-sm text-gray-500">No hay facturas que coincidan con los filtros.</p>
       ) : (
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="text-left border-b text-gray-500">
-              <th className="py-2 font-medium">Nº</th>
-              <th className="py-2 font-medium">Alumno</th>
-              <th className="py-2 font-medium">Concepto</th>
-              <th className="py-2 font-medium">Fecha</th>
-              <th className="py-2 font-medium text-right">Importe</th>
-              <th className="py-2 font-medium text-right">Pendiente</th>
-              <th className="py-2 font-medium">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((i) => {
-              const s = studentById[i.studentId];
+        <>
+          {/* Phone: one card per invoice */}
+          <ul className="md:hidden divide-y border rounded-lg bg-white">
+            {paged.items.map((i) => {
+              const st = studentById[i.studentId];
               const pending = Number(i.amount) - Number(i.paidAmount);
               return (
-                <tr key={i.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2 font-mono text-xs">
-                    <Link
-                      href={`/invoices/${i.id}`}
-                      className="text-brand-700 hover:underline"
-                    >
-                      {i.number}
-                    </Link>
-                  </td>
-                  <td className="py-2">
-                    {s ? `${s.firstName} ${s.lastName}` : '—'}
-                  </td>
-                  <td className="py-2 text-gray-600 max-w-xs truncate">
-                    {i.description ?? '—'}
-                  </td>
-                  <td className="py-2 text-gray-600">
-                    {formatDate(i.issueDate)}
-                  </td>
-                  <td className="py-2 text-right">{formatEur(i.amount)}</td>
-                  <td className="py-2 text-right">
-                    {i.status === 'CANCELLED' ? '—' : formatEur(pending)}
-                  </td>
-                  <td className="py-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLE[i.status]}`}
-                      >
-                        {STATUS_LABEL[i.status]}
+                <li key={i.id}>
+                  <Link href={`/invoices/${i.id}`} className="block px-3 py-3">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="font-medium truncate">
+                        {st ? `${st.firstName} ${st.lastName}` : '—'}
                       </span>
-                      {i.type === 'RECTIFICATIVA' && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800">
-                          R
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                      <span className="font-medium whitespace-nowrap">{formatEur(i.amount)}</span>
+                    </span>
+                    <span className="block text-xs text-gray-500 truncate">
+                      {i.description ?? '—'}
+                    </span>
+                    <span className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                      <span className="font-mono">{i.number}</span>
+                      <span>· {formatDate(i.issueDate)}</span>
+                      <span className={`ml-auto px-2 py-0.5 rounded ${STATUS_STYLE[i.status]}`}>
+                        {STATUS_LABEL[i.status]}
+                        {i.status === 'PARTIAL' && ` · faltan ${formatEur(pending)}`}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
               );
             })}
-          </tbody>
-        </table>
+          </ul>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="text-left border-b text-gray-500">
+                  <th className="py-2 font-medium">Nº</th>
+                  <th className="py-2 font-medium">Alumno</th>
+                  <th className="py-2 font-medium">Concepto</th>
+                  <th className="py-2 font-medium">Fecha</th>
+                  <th className="py-2 font-medium text-right">Importe</th>
+                  <th className="py-2 font-medium text-right">Pendiente</th>
+                  <th className="py-2 font-medium pl-4">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.items.map((i) => {
+                  const s = studentById[i.studentId];
+                  const pending = Number(i.amount) - Number(i.paidAmount);
+                  return (
+                    <tr key={i.id} className="border-b hover:bg-gray-50">
+                      <td className="py-2 font-mono text-xs">
+                        <Link href={`/invoices/${i.id}`} className="text-brand-700 hover:underline">
+                          {i.number}
+                        </Link>
+                      </td>
+                      <td className="py-2">{s ? `${s.firstName} ${s.lastName}` : '—'}</td>
+                      <td className="py-2 text-gray-600 max-w-xs truncate">
+                        {i.description ?? '—'}
+                      </td>
+                      <td className="py-2 text-gray-600">{formatDate(i.issueDate)}</td>
+                      <td className="py-2 text-right">{formatEur(i.amount)}</td>
+                      <td className="py-2 text-right">
+                        {i.status === 'CANCELLED' ? '—' : formatEur(pending)}
+                      </td>
+                      <td className="py-2 pl-4">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-xs px-2 py-0.5 rounded ${STATUS_STYLE[i.status]}`}>
+                            {STATUS_LABEL[i.status]}
+                          </span>
+                          {i.type === 'RECTIFICATIVA' && (
+                            <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                              R
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <Pager paged={paged} />
+        </>
       )}
     </div>
   );
@@ -447,15 +438,11 @@ function SummaryCard({
   tone?: 'gray' | 'green' | 'amber';
 }) {
   const toneClass =
-    tone === 'green'
-      ? 'text-green-700'
-      : tone === 'amber'
-        ? 'text-amber-700'
-        : 'text-gray-900';
+    tone === 'green' ? 'text-green-700' : tone === 'amber' ? 'text-amber-700' : 'text-gray-900';
   return (
-    <div className="border rounded-lg p-4 bg-white">
+    <div className="border rounded-lg p-3 sm:p-4 bg-white">
       <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className={`text-xl font-semibold ${toneClass}`}>{value}</p>
+      <p className={`text-base sm:text-xl font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
 }

@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -25,12 +21,35 @@ export class StudentsService {
     });
   }
 
-  findAll(tenantId: string) {
-    return this.prisma.student.findMany({
-      // Erased students only survive on their invoices.
-      where: { tenantId, erasedAt: null },
-      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-    });
+  /** With each student's current groups and what they still owe, for the list. */
+  async findAll(tenantId: string) {
+    const [students, owed] = await Promise.all([
+      this.prisma.student.findMany({
+        // Erased students only survive on their invoices.
+        where: { tenantId, erasedAt: null },
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+        include: {
+          enrollments: {
+            where: { status: { in: ['ACTIVE', 'PENDING', 'WAITLIST'] } },
+            select: { status: true, group: { select: { id: true, name: true } } },
+            orderBy: { enrolledAt: 'asc' },
+          },
+        },
+      }),
+      this.prisma.invoice.groupBy({
+        by: ['studentId'],
+        where: { tenantId, status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] } },
+        _sum: { amount: true, paidAmount: true },
+      }),
+    ]);
+    const balance = new Map(
+      owed.map((o) => [o.studentId, Number(o._sum.amount ?? 0) - Number(o._sum.paidAmount ?? 0)]),
+    );
+    return students.map(({ enrollments, ...st }) => ({
+      ...st,
+      groups: enrollments.map((e) => ({ ...e.group, status: e.status })),
+      balance: (balance.get(st.id) ?? 0).toFixed(2),
+    }));
   }
 
   /**
@@ -91,11 +110,7 @@ export class StudentsService {
    * `guardian` user (or reuses an existing guardian login with the same email,
    * so one parent can cover several children) and links it to the student.
    */
-  async grantPortalAccess(
-    tenantId: string,
-    studentId: string,
-    dto: GrantPortalAccessDto,
-  ) {
+  async grantPortalAccess(tenantId: string, studentId: string, dto: GrantPortalAccessDto) {
     await this.findOne(tenantId, studentId);
 
     const role = await this.prisma.role.upsert({
@@ -126,9 +141,7 @@ export class StudentsService {
         where: { studentId, userId },
       });
       if (alreadyLinked) {
-        throw new ConflictException(
-          'Esta familia ya tiene acceso a este alumno',
-        );
+        throw new ConflictException('Esta familia ya tiene acceso a este alumno');
       }
     } else {
       const user = await this.prisma.user.create({
@@ -184,11 +197,7 @@ export class StudentsService {
    * Revokes a family's access to this student. Removes the link; if the login
    * has no remaining children it is deleted too (orphaned account cleanup).
    */
-  async revokePortalAccess(
-    tenantId: string,
-    studentId: string,
-    guardianId: string,
-  ): Promise<void> {
+  async revokePortalAccess(tenantId: string, studentId: string, guardianId: string): Promise<void> {
     await this.findOne(tenantId, studentId);
     const guardian = await this.prisma.guardian.findFirst({
       where: { id: guardianId, studentId },

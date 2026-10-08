@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Banknote } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatDate, formatDateTime, formatEur } from '@/lib/format';
 import { api, apiBlob, ApiError } from '@/lib/api';
 import { confirmToast } from '@/lib/confirm';
 import { EmptyState } from '@/components/empty-state';
@@ -92,28 +93,6 @@ const EMPTY_PAYMENT = {
 };
 
 const EMPTY_RECT = { amount: '', reason: '' };
-
-function formatEur(value: string | number): string {
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(Number(value));
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-ES');
-}
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();

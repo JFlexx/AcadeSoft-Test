@@ -70,10 +70,7 @@ describe('Students (e2e)', () => {
     expect(list.body).toHaveLength(1);
     expect(list.body[0].id).toBe(studentId);
 
-    const fetched = await http()
-      .get(`/students/${studentId}`)
-      .set(bearer(acmeToken))
-      .expect(200);
+    const fetched = await http().get(`/students/${studentId}`).set(bearer(acmeToken)).expect(200);
     expect(fetched.body.id).toBe(studentId);
 
     const updated = await http()
@@ -88,6 +85,42 @@ describe('Students (e2e)', () => {
 
     await http().delete(`/students/${studentId}`).set(bearer(acmeToken)).expect(204);
     await http().get(`/students/${studentId}`).set(bearer(acmeToken)).expect(404);
+  });
+
+  it('lists each student with their current groups and what they owe', async () => {
+    const st = await http()
+      .post('/students')
+      .set(bearer(acmeToken))
+      .send({ firstName: 'Ana', lastName: 'García' })
+      .expect(201);
+    const course = await prisma.course.create({
+      data: { tenantId: acme.tenantId, name: 'Inglés' },
+    });
+    const [b1, a2] = await Promise.all(
+      ['Inglés B1', 'Inglés A2'].map((name) =>
+        prisma.group.create({ data: { tenantId: acme.tenantId, courseId: course.id, name } }),
+      ),
+    );
+    await prisma.enrollment.create({ data: { studentId: st.body.id, groupId: b1.id } });
+    await prisma.enrollment.create({
+      data: { studentId: st.body.id, groupId: a2.id, status: 'DROPPED' },
+    });
+    for (const amount of [50, 20]) {
+      await http()
+        .post('/invoices')
+        .set(bearer(acmeToken))
+        .send({ studentId: st.body.id, amount })
+        .expect(201);
+    }
+    const twenty = await prisma.invoice.findFirstOrThrow({ where: { amount: 20 } });
+    await prisma.invoice.update({
+      where: { id: twenty.id },
+      data: { status: 'PAID', paidAmount: 20 },
+    });
+
+    const list = await http().get('/students').set(bearer(acmeToken)).expect(200);
+    expect(list.body[0].groups).toEqual([{ id: b1.id, name: 'Inglés B1', status: 'ACTIVE' }]);
+    expect(list.body[0].balance).toBe('50.00');
   });
 
   it('isolates students between tenants', async () => {
@@ -118,10 +151,7 @@ describe('Students (e2e)', () => {
     expect(betaList.body).toHaveLength(1);
     expect(betaList.body[0].lastName).toBe('Beta');
 
-    await http()
-      .get(`/students/${acmeStudent.body.id}`)
-      .set(bearer(betaToken))
-      .expect(404);
+    await http().get(`/students/${acmeStudent.body.id}`).set(bearer(betaToken)).expect(404);
 
     await http()
       .patch(`/students/${acmeStudent.body.id}`)
@@ -129,10 +159,7 @@ describe('Students (e2e)', () => {
       .send({ firstName: 'Hacked' })
       .expect(404);
 
-    await http()
-      .delete(`/students/${acmeStudent.body.id}`)
-      .set(bearer(betaToken))
-      .expect(404);
+    await http().delete(`/students/${acmeStudent.body.id}`).set(bearer(betaToken)).expect(404);
   });
 
   it('rejects requests without bearer with 401', async () => {
