@@ -14,6 +14,7 @@ import { GroupWaitlist } from '@/components/group-waitlist';
 import { ChargeGroupPanel } from '@/components/charge-group-panel';
 import { GradesEditor } from '@/components/grades-editor';
 import { GroupReportCards } from '@/components/report-card-panel';
+import { Tabs, useTab } from '@/components/tabs';
 
 type Course = { id: string; name: string };
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -89,6 +90,9 @@ const EMPTY_SESSION_FORM = {
 
 const DEFAULT_DURATION = 60;
 
+const TAB_KEYS = ['summary', 'students', 'sessions', 'grades'] as const;
+type TabKey = (typeof TAB_KEYS)[number];
+
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('es-ES', {
     weekday: 'short',
@@ -139,6 +143,7 @@ export default function GroupDetailPage() {
   const [showPastSessions, setShowPastSessions] = useState(false);
   const [chargeOpen, setChargeOpen] = useState(false);
   const [reportCardsOpen, setReportCardsOpen] = useState(false);
+  const [tab, setTab] = useTab<TabKey>(TAB_KEYS, 'summary');
 
   // Per-enrollment fee override drafts (live editing state)
   const [feeDrafts, setFeeDrafts] = useState<Record<string, string>>({});
@@ -177,10 +182,7 @@ export default function GroupDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
 
-  const studentById = useMemo(
-    () => Object.fromEntries(students.map((s) => [s.id, s])),
-    [students],
-  );
+  const studentById = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s])), [students]);
   const teacherById = useMemo(
     () => Object.fromEntries(allTeachers.map((t) => [t.id, t])),
     [allTeachers],
@@ -225,7 +227,11 @@ export default function GroupDetailPage() {
     try {
       const payload: Record<string, unknown> = { status };
       if (status === 'DROPPED') payload.droppedAt = new Date().toISOString();
-      if (status === 'ACTIVE' && enrollment.status !== 'ACTIVE' && !enrollment.enrollmentFeeInvoiced) {
+      if (
+        status === 'ACTIVE' &&
+        enrollment.status !== 'ACTIVE' &&
+        !enrollment.enrollmentFeeInvoiced
+      ) {
         payload.chargeEnrollmentFee = await askChargeEnrollmentFee(group?.enrollmentFee);
       }
       const res = await api<{ enrollmentFeeInvoice: { number: string; amount: string } | null }>(
@@ -365,10 +371,9 @@ export default function GroupDetailPage() {
   }
 
   async function handleDeleteSession(s: Session) {
-    const ok = await confirmToast(
-      `¿Borrar la sesión del ${formatDateTime(s.scheduledAt)}?`,
-      { confirmLabel: 'Borrar' },
-    );
+    const ok = await confirmToast(`¿Borrar la sesión del ${formatDateTime(s.scheduledAt)}?`, {
+      confirmLabel: 'Borrar',
+    });
     if (!ok) return;
     try {
       await api(`/sessions/${s.id}`, { method: 'DELETE' });
@@ -405,16 +410,14 @@ export default function GroupDetailPage() {
   const activeCount = enrollments.filter((e) => e.status === 'ACTIVE').length;
   const waitlist = enrollments.filter((e) => e.status === 'WAITLIST');
   const enrolled = enrollments.filter((e) => e.status !== 'WAITLIST');
-  const freeSpots =
-    group.maxCapacity == null ? null : Math.max(0, group.maxCapacity - activeCount);
+  const freeSpots = group.maxCapacity == null ? null : Math.max(0, group.maxCapacity - activeCount);
 
   // A generated school year is ~80 classes: show what's ahead by default.
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const pastSessions = sessions.filter((s) => new Date(s.scheduledAt) < startOfToday);
-  const visibleSessions = showPastSessions
-    ? sessions
-    : sessions.filter((s) => new Date(s.scheduledAt) >= startOfToday);
+  const upcomingSessions = sessions.filter((s) => new Date(s.scheduledAt) >= startOfToday);
+  const visibleSessions = showPastSessions ? sessions : upcomingSessions;
 
   return (
     <div className="p-6 max-w-4xl">
@@ -436,467 +439,472 @@ export default function GroupDetailPage() {
             </Link>
           </div>
         </div>
-        {group.description && (
-          <p className="text-sm text-gray-600 mt-1">{group.description}</p>
-        )}
+        {group.description && <p className="text-sm text-gray-600 mt-1">{group.description}</p>}
       </header>
 
       {chargeOpen && <ChargeGroupPanel groupId={group.id} onClose={() => setChargeOpen(false)} />}
 
-      <section className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-8 max-w-md">
-        <span className="text-gray-500">Curso</span>
-        <span>{course?.name ?? '—'}</span>
-        <span className="text-gray-500">Profesor</span>
-        <span>
-          {groupTeacher ? `${groupTeacher.firstName} ${groupTeacher.lastName}` : 'Sin asignar'}
-        </span>
-        <span className="text-gray-500">Aforo</span>
-        <span>
-          {activeCount}
-          {group.maxCapacity ? ` / ${group.maxCapacity}` : ''}
-          {' alumnos activos'}
-        </span>
-        <span className="text-gray-500">Periodo</span>
-        <span>
-          {group.startDate ? group.startDate.slice(0, 10) : '—'}
-          {' → '}
-          {group.endDate ? group.endDate.slice(0, 10) : '—'}
-        </span>
-        <span className="text-gray-500">Cuota mensual</span>
-        <span>
-          {group.monthlyFee
-            ? new Intl.NumberFormat('es-ES', {
-                style: 'currency',
-                currency: 'EUR',
-              }).format(Number(group.monthlyFee))
-            : 'Sin cuota'}
-        </span>
-        <span className="text-gray-500">Matrícula</span>
-        <span>
-          {group.enrollmentFee
-            ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
-                Number(group.enrollmentFee),
-              )
-            : 'Sin matrícula'}
-        </span>
-        <span className="text-gray-500">Aula</span>
-        <span>{rooms.find((r) => r.id === group.roomId)?.name ?? 'Sin aula'}</span>
-        <span className="text-gray-500">Estado</span>
-        <span>{group.isActive ? 'Activo' : 'Inactivo'}</span>
-      </section>
+      <Tabs
+        tabs={[
+          { key: 'summary', label: 'Resumen' },
+          { key: 'students', label: 'Alumnos', count: activeCount + waitlist.length },
+          { key: 'sessions', label: 'Clases', count: upcomingSessions.length },
+          { key: 'grades', label: 'Notas' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
-      <section className="mb-10">
-        <h2 className="font-medium mb-3">Horario semanal</h2>
-        <GroupSchedule
-          groupId={group.id}
-          groupStart={group.startDate}
-          groupEnd={group.endDate}
-          onGenerated={refresh}
-        />
-      </section>
+      {tab === 'summary' && (
+        <>
+          <section className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-8 max-w-md">
+            <span className="text-gray-500">Curso</span>
+            <span>{course?.name ?? '—'}</span>
+            <span className="text-gray-500">Profesor</span>
+            <span>
+              {groupTeacher ? `${groupTeacher.firstName} ${groupTeacher.lastName}` : 'Sin asignar'}
+            </span>
+            <span className="text-gray-500">Aforo</span>
+            <span>
+              {activeCount}
+              {group.maxCapacity ? ` / ${group.maxCapacity}` : ''}
+              {' alumnos activos'}
+            </span>
+            <span className="text-gray-500">Periodo</span>
+            <span>
+              {group.startDate ? group.startDate.slice(0, 10) : '—'}
+              {' → '}
+              {group.endDate ? group.endDate.slice(0, 10) : '—'}
+            </span>
+            <span className="text-gray-500">Cuota mensual</span>
+            <span>
+              {group.monthlyFee
+                ? new Intl.NumberFormat('es-ES', {
+                    style: 'currency',
+                    currency: 'EUR',
+                  }).format(Number(group.monthlyFee))
+                : 'Sin cuota'}
+            </span>
+            <span className="text-gray-500">Matrícula</span>
+            <span>
+              {group.enrollmentFee
+                ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
+                    Number(group.enrollmentFee),
+                  )
+                : 'Sin matrícula'}
+            </span>
+            <span className="text-gray-500">Aula</span>
+            <span>{rooms.find((r) => r.id === group.roomId)?.name ?? 'Sin aula'}</span>
+            <span className="text-gray-500">Estado</span>
+            <span>{group.isActive ? 'Activo' : 'Inactivo'}</span>
+          </section>
 
-      <section>
-        <header className="flex items-center justify-between mb-3">
-          <h2 className="font-medium">Alumnos inscritos</h2>
-          {!enrollOpen && (
-            <button
-              onClick={() => {
-                setEnrollOpen(true);
-                setEnrollStudentId(availableStudents[0]?.id ?? '');
-                setEnrollError(null);
-              }}
-              disabled={availableStudents.length === 0}
-              className="btn-primary"
-              title={availableStudents.length === 0 ? 'No hay alumnos sin inscribir' : ''}
-            >
-              + Inscribir alumno
-            </button>
-          )}
-        </header>
+          <section className="mb-10">
+            <h2 className="font-medium mb-3">Horario semanal</h2>
+            <GroupSchedule
+              groupId={group.id}
+              groupStart={group.startDate}
+              groupEnd={group.endDate}
+              onGenerated={refresh}
+            />
+          </section>
+        </>
+      )}
 
-        {enrollOpen && (
-          <div className="border rounded p-4 mb-4 space-y-3 bg-gray-50">
-            <div className="flex items-end gap-2">
-              <label className="flex-1">
-                <span className="text-xs text-gray-600 block mb-1">Alumno</span>
-                <select
-                  value={enrollStudentId}
-                  onChange={(e) => setEnrollStudentId(e.target.value)}
-                  className="w-full border rounded px-2 py-1 text-sm bg-white"
-                >
-                  {availableStudents.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.firstName} {s.lastName}
-                      {s.email ? ` (${s.email})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                onClick={handleEnroll}
-                disabled={enrollSubmitting || !enrollStudentId}
-                className="btn-primary"
-              >
-                {enrollSubmitting ? 'Inscribiendo…' : 'Inscribir'}
-              </button>
-              <button
-                onClick={() => {
-                  setEnrollOpen(false);
-                  setEnrollError(null);
-                }}
-                className="btn-secondary"
-              >
-                Cancelar
-              </button>
-            </div>
-            {enrollError && <p className="text-sm text-red-600">{enrollError}</p>}
-          </div>
-        )}
-
-        {enrolled.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="Sin alumnos inscritos"
-            description="Inscribe alumnos en este grupo para poder pasar lista y facturarles la cuota."
-            action={
-              students.length === 0 ? (
-                <Link href="/students" className="btn-primary">
-                  Crear alumnos
-                </Link>
-              ) : !enrollOpen ? (
+      {tab === 'students' && (
+        <>
+          <section>
+            <header className="flex items-center justify-between mb-3">
+              <h2 className="font-medium">Alumnos inscritos</h2>
+              {!enrollOpen && (
                 <button
-                  className="btn-primary"
                   onClick={() => {
                     setEnrollOpen(true);
                     setEnrollStudentId(availableStudents[0]?.id ?? '');
                     setEnrollError(null);
                   }}
+                  disabled={availableStudents.length === 0}
+                  className="btn-primary"
+                  title={availableStudents.length === 0 ? 'No hay alumnos sin inscribir' : ''}
                 >
                   + Inscribir alumno
                 </button>
-              ) : undefined
-            }
-          />
-        ) : (
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="text-left border-b text-gray-500">
-                <th className="py-2 font-medium">Alumno</th>
-                <th className="py-2 font-medium">Estado</th>
-                <th className="py-2 font-medium">Inscrito</th>
-                <th className="py-2 font-medium">Cuota mensual</th>
-                <th className="py-2 font-medium text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {enrolled.map((e) => {
-                const s = studentById[e.studentId];
-                const fullName = s ? `${s.firstName} ${s.lastName}` : '(alumno desconocido)';
-                return (
-                  <tr key={e.id} className="border-b hover:bg-gray-50">
-                    <td className="py-2">{fullName}</td>
-                    <td className="py-2">
-                      <select
-                        value={e.status}
-                        onChange={(ev) =>
-                          handleEnrollmentStatus(e, ev.target.value as Enrollment['status'])
-                        }
-                        className="border rounded px-1 py-0.5 text-xs bg-white"
-                      >
-                        {(Object.keys(ENROLLMENT_STATUS_LABEL) as Enrollment['status'][]).map(
-                          (s) => (
-                            <option key={s} value={s}>
-                              {ENROLLMENT_STATUS_LABEL[s]}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </td>
-                    <td className="py-2 text-gray-600">{e.enrolledAt.slice(0, 10)}</td>
-                    <td className="py-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min={0}
-                          value={
-                            feeDrafts[e.id] ??
-                            (e.monthlyFeeOverride ?? '')
-                          }
-                          onChange={(ev) =>
-                            setFeeDrafts((prev) => ({
-                              ...prev,
-                              [e.id]: ev.target.value,
-                            }))
-                          }
-                          onBlur={() => handleFeeOverrideSave(e)}
-                          onKeyDown={(ev) => {
-                            if (ev.key === 'Enter') ev.currentTarget.blur();
-                          }}
-                          placeholder={
-                            group.monthlyFee
-                              ? `= ${group.monthlyFee}`
-                              : 'Sin cuota'
-                          }
-                          disabled={feeSaving === e.id}
-                          className="w-24 border rounded px-2 py-1 text-sm bg-white disabled:opacity-50"
-                        />
-                        <span className="text-xs text-gray-500">€</span>
-                        {!e.monthlyFeeOverride && group.monthlyFee && (
-                          <span
-                            className="text-xs text-gray-400"
-                            title="Usando cuota del grupo"
-                          >
-                            (grupo)
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2 text-right">
-                      <button
-                        onClick={() => handleUnenroll(e.id, fullName)}
-                        className="text-sm text-red-600 hover:underline"
-                      >
-                        Quitar
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </section>
+              )}
+            </header>
 
-      {waitlist.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-medium mb-3">Lista de espera ({waitlist.length})</h2>
-          <GroupWaitlist
-            entries={waitlist}
-            enrollmentFee={group.enrollmentFee}
-            studentById={studentById}
-            freeSpots={freeSpots}
-            onChange={refresh}
-          />
+            {enrollOpen && (
+              <div className="border rounded p-4 mb-4 space-y-3 bg-gray-50">
+                <div className="flex items-end gap-2">
+                  <label className="flex-1">
+                    <span className="text-xs text-gray-600 block mb-1">Alumno</span>
+                    <select
+                      value={enrollStudentId}
+                      onChange={(e) => setEnrollStudentId(e.target.value)}
+                      className="w-full border rounded px-2 py-1 text-sm bg-white"
+                    >
+                      {availableStudents.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.firstName} {s.lastName}
+                          {s.email ? ` (${s.email})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    onClick={handleEnroll}
+                    disabled={enrollSubmitting || !enrollStudentId}
+                    className="btn-primary"
+                  >
+                    {enrollSubmitting ? 'Inscribiendo…' : 'Inscribir'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEnrollOpen(false);
+                      setEnrollError(null);
+                    }}
+                    className="btn-secondary"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                {enrollError && <p className="text-sm text-red-600">{enrollError}</p>}
+              </div>
+            )}
+
+            {enrolled.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="Sin alumnos inscritos"
+                description="Inscribe alumnos en este grupo para poder pasar lista y facturarles la cuota."
+                action={
+                  students.length === 0 ? (
+                    <Link href="/students" className="btn-primary">
+                      Crear alumnos
+                    </Link>
+                  ) : !enrollOpen ? (
+                    <button
+                      className="btn-primary"
+                      onClick={() => {
+                        setEnrollOpen(true);
+                        setEnrollStudentId(availableStudents[0]?.id ?? '');
+                        setEnrollError(null);
+                      }}
+                    >
+                      + Inscribir alumno
+                    </button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="text-left border-b text-gray-500">
+                    <th className="py-2 font-medium">Alumno</th>
+                    <th className="py-2 font-medium">Estado</th>
+                    <th className="py-2 font-medium">Inscrito</th>
+                    <th className="py-2 font-medium">Cuota mensual</th>
+                    <th className="py-2 font-medium text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrolled.map((e) => {
+                    const s = studentById[e.studentId];
+                    const fullName = s ? `${s.firstName} ${s.lastName}` : '(alumno desconocido)';
+                    return (
+                      <tr key={e.id} className="border-b hover:bg-gray-50">
+                        <td className="py-2">{fullName}</td>
+                        <td className="py-2">
+                          <select
+                            value={e.status}
+                            onChange={(ev) =>
+                              handleEnrollmentStatus(e, ev.target.value as Enrollment['status'])
+                            }
+                            className="border rounded px-1 py-0.5 text-xs bg-white"
+                          >
+                            {(Object.keys(ENROLLMENT_STATUS_LABEL) as Enrollment['status'][]).map(
+                              (s) => (
+                                <option key={s} value={s}>
+                                  {ENROLLMENT_STATUS_LABEL[s]}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                        </td>
+                        <td className="py-2 text-gray-600">{e.enrolledAt.slice(0, 10)}</td>
+                        <td className="py-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              value={feeDrafts[e.id] ?? e.monthlyFeeOverride ?? ''}
+                              onChange={(ev) =>
+                                setFeeDrafts((prev) => ({
+                                  ...prev,
+                                  [e.id]: ev.target.value,
+                                }))
+                              }
+                              onBlur={() => handleFeeOverrideSave(e)}
+                              onKeyDown={(ev) => {
+                                if (ev.key === 'Enter') ev.currentTarget.blur();
+                              }}
+                              placeholder={group.monthlyFee ? `= ${group.monthlyFee}` : 'Sin cuota'}
+                              disabled={feeSaving === e.id}
+                              className="w-24 border rounded px-2 py-1 text-sm bg-white disabled:opacity-50"
+                            />
+                            <span className="text-xs text-gray-500">€</span>
+                            {!e.monthlyFeeOverride && group.monthlyFee && (
+                              <span
+                                className="text-xs text-gray-400"
+                                title="Usando cuota del grupo"
+                              >
+                                (grupo)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 text-right">
+                          <button
+                            onClick={() => handleUnenroll(e.id, fullName)}
+                            className="text-sm text-red-600 hover:underline"
+                          >
+                            Quitar
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          {waitlist.length > 0 && (
+            <section className="mt-10">
+              <h2 className="font-medium mb-3">Lista de espera ({waitlist.length})</h2>
+              <GroupWaitlist
+                entries={waitlist}
+                enrollmentFee={group.enrollmentFee}
+                studentById={studentById}
+                freeSpots={freeSpots}
+                onChange={refresh}
+              />
+            </section>
+          )}
+        </>
+      )}
+
+      {tab === 'grades' && (
+        <section>
+          <header className="flex items-center justify-between mb-3">
+            <h2 className="font-medium">Notas</h2>
+            {!reportCardsOpen && (
+              <button onClick={() => setReportCardsOpen(true)} className="btn-secondary">
+                Enviar boletines
+              </button>
+            )}
+          </header>
+          {reportCardsOpen && (
+            <GroupReportCards groupId={group.id} onClose={() => setReportCardsOpen(false)} />
+          )}
+          <GradesEditor groupId={group.id} basePath="" />
         </section>
       )}
 
-      <section className="mt-10">
-        <header className="flex items-center justify-between mb-3">
-          <h2 className="font-medium">Notas</h2>
-          {!reportCardsOpen && (
-            <button onClick={() => setReportCardsOpen(true)} className="btn-secondary">
-              Enviar boletines
-            </button>
-          )}
-        </header>
-        {reportCardsOpen && (
-          <GroupReportCards groupId={group.id} onClose={() => setReportCardsOpen(false)} />
-        )}
-        <GradesEditor groupId={group.id} basePath="" />
-      </section>
+      {tab === 'sessions' && (
+        <section>
+          <header className="flex items-center justify-between mb-3">
+            <h2 className="font-medium">Sesiones</h2>
+            {!showSessionForm && (
+              <button onClick={startCreateSession} className="btn-primary">
+                + Nueva sesión
+              </button>
+            )}
+          </header>
 
-      <section className="mt-10">
-        <header className="flex items-center justify-between mb-3">
-          <h2 className="font-medium">Sesiones</h2>
-          {!showSessionForm && (
-            <button
-              onClick={startCreateSession}
-              className="btn-primary"
+          {showSessionForm && (
+            <form
+              onSubmit={handleSessionSubmit}
+              className="border rounded p-4 mb-4 space-y-3 bg-gray-50"
             >
-              + Nueva sesión
-            </button>
-          )}
-        </header>
-
-        {showSessionForm && (
-          <form
-            onSubmit={handleSessionSubmit}
-            className="border rounded p-4 mb-4 space-y-3 bg-gray-50"
-          >
-            <h3 className="text-sm font-medium">
-              {editingSession ? 'Editar sesión' : 'Nueva sesión'}
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="text-xs text-gray-600 block mb-1">Fecha y hora *</span>
-                <input
-                  type="datetime-local"
-                  required
-                  value={sessionForm.scheduledAt}
-                  onChange={(e) => setSessionForm({ ...sessionForm, scheduledAt: e.target.value })}
-                  className="w-full border rounded px-2 py-1 text-sm"
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs text-gray-600 block mb-1">Profesor</span>
-                <select
-                  value={sessionForm.teacherId}
-                  onChange={(e) => setSessionForm({ ...sessionForm, teacherId: e.target.value })}
-                  className="w-full border rounded px-2 py-1 text-sm bg-white"
-                >
-                  <option value="">Sin asignar</option>
-                  {allTeachers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.firstName} {t.lastName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {rooms.length > 0 && (
+              <h3 className="text-sm font-medium">
+                {editingSession ? 'Editar sesión' : 'Nueva sesión'}
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="text-xs text-gray-600 block mb-1">Aula</span>
+                  <span className="text-xs text-gray-600 block mb-1">Fecha y hora *</span>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={sessionForm.scheduledAt}
+                    onChange={(e) =>
+                      setSessionForm({ ...sessionForm, scheduledAt: e.target.value })
+                    }
+                    className="w-full border rounded px-2 py-1 text-sm"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs text-gray-600 block mb-1">Profesor</span>
                   <select
-                    value={sessionForm.roomId}
-                    onChange={(e) => setSessionForm({ ...sessionForm, roomId: e.target.value })}
+                    value={sessionForm.teacherId}
+                    onChange={(e) => setSessionForm({ ...sessionForm, teacherId: e.target.value })}
                     className="w-full border rounded px-2 py-1 text-sm bg-white"
                   >
-                    <option value="">
-                      {group?.roomId
-                        ? `La del grupo (${rooms.find((r) => r.id === group.roomId)?.name ?? ''})`
-                        : 'Sin aula'}
-                    </option>
-                    {rooms.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
+                    <option value="">Sin asignar</option>
+                    {allTeachers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.firstName} {t.lastName}
                       </option>
                     ))}
                   </select>
                 </label>
-              )}
-              <label className="block">
-                <span className="text-xs text-gray-600 block mb-1">Duración (min) *</span>
-                <input
-                  type="number"
-                  required
-                  min={15}
-                  max={480}
-                  step={5}
-                  value={sessionForm.durationMinutes}
-                  onChange={(e) =>
-                    setSessionForm({ ...sessionForm, durationMinutes: e.target.value })
-                  }
-                  className="w-full border rounded px-2 py-1 text-sm"
-                />
-              </label>
-              <label className="block col-span-2">
-                <span className="text-xs text-gray-600 block mb-1">Notas</span>
-                <textarea
-                  value={sessionForm.notes}
-                  onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })}
-                  rows={2}
-                  className="w-full border rounded px-2 py-1 text-sm"
-                />
-              </label>
-            </div>
-            {sessionError && <p className="text-sm text-red-600">{sessionError}</p>}
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={sessionSubmitting}
-                className="btn-primary"
-              >
-                {sessionSubmitting
-                  ? 'Guardando…'
-                  : editingSession
-                    ? 'Guardar cambios'
-                    : 'Crear sesión'}
-              </button>
-              <button
-                type="button"
-                onClick={cancelSessionForm}
-                className="btn-secondary"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        )}
-
-        {pastSessions.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowPastSessions((v) => !v)}
-            className="text-sm text-gray-600 hover:underline mb-2"
-          >
-            {showPastSessions
-              ? 'Ocultar las pasadas'
-              : `Mostrar también las pasadas (${pastSessions.length})`}
-          </button>
-        )}
-
-        {visibleSessions.length === 0 ? (
-          <EmptyState
-            icon={CalendarClock}
-            title={sessions.length === 0 ? 'Sin sesiones planificadas' : 'Sin próximas sesiones'}
-            description="Define el horario semanal arriba para generar todas las clases del curso, o crea una sesión suelta."
-            action={
-              !showSessionForm && (
-                <button className="btn-primary" onClick={startCreateSession}>
-                  + Nueva sesión
+                {rooms.length > 0 && (
+                  <label className="block">
+                    <span className="text-xs text-gray-600 block mb-1">Aula</span>
+                    <select
+                      value={sessionForm.roomId}
+                      onChange={(e) => setSessionForm({ ...sessionForm, roomId: e.target.value })}
+                      className="w-full border rounded px-2 py-1 text-sm bg-white"
+                    >
+                      <option value="">
+                        {group?.roomId
+                          ? `La del grupo (${rooms.find((r) => r.id === group.roomId)?.name ?? ''})`
+                          : 'Sin aula'}
+                      </option>
+                      {rooms.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <label className="block">
+                  <span className="text-xs text-gray-600 block mb-1">Duración (min) *</span>
+                  <input
+                    type="number"
+                    required
+                    min={15}
+                    max={480}
+                    step={5}
+                    value={sessionForm.durationMinutes}
+                    onChange={(e) =>
+                      setSessionForm({ ...sessionForm, durationMinutes: e.target.value })
+                    }
+                    className="w-full border rounded px-2 py-1 text-sm"
+                  />
+                </label>
+                <label className="block col-span-2">
+                  <span className="text-xs text-gray-600 block mb-1">Notas</span>
+                  <textarea
+                    value={sessionForm.notes}
+                    onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })}
+                    rows={2}
+                    className="w-full border rounded px-2 py-1 text-sm"
+                  />
+                </label>
+              </div>
+              {sessionError && <p className="text-sm text-red-600">{sessionError}</p>}
+              <div className="flex gap-2">
+                <button type="submit" disabled={sessionSubmitting} className="btn-primary">
+                  {sessionSubmitting
+                    ? 'Guardando…'
+                    : editingSession
+                      ? 'Guardar cambios'
+                      : 'Crear sesión'}
                 </button>
-              )
-            }
-          />
-        ) : (
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="text-left border-b text-gray-500">
-                <th className="py-2 font-medium">Fecha</th>
-                <th className="py-2 font-medium">Profesor</th>
-                <th className="py-2 font-medium">Estado</th>
-                <th className="py-2 font-medium">Notas</th>
-                <th className="py-2 font-medium text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleSessions.map((s) => {
-                const t = s.teacherId ? teacherById[s.teacherId] : null;
-                const end = new Date(
-                  new Date(s.scheduledAt).getTime() +
-                    (s.durationMinutes ?? DEFAULT_DURATION) * 60_000,
-                );
-                return (
-                  <tr key={s.id} className="border-b hover:bg-gray-50">
-                    <td className="py-2">
-                      <Link href={`/sessions/${s.id}`} className="hover:underline">
-                        {formatDateTime(s.scheduledAt)}
-                      </Link>
-                      <span className="text-gray-400"> – {formatTime(end)}</span>
-                    </td>
-                    <td className="py-2 text-gray-600">
-                      {t ? `${t.firstName} ${t.lastName}` : '—'}
-                    </td>
-                    <td className="py-2">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded ${SESSION_STATUS_STYLE[s.status]}`}
-                      >
-                        {SESSION_STATUS_LABEL[s.status]}
-                        {s.cancelledByHolidayId && ' (día sin clase)'}
-                      </span>
-                    </td>
-                    <td className="py-2 text-gray-600 max-w-xs truncate">{s.notes ?? '—'}</td>
-                    <td className="py-2 text-right space-x-3">
-                      <button
-                        onClick={() => startEditSession(s)}
-                        className="text-sm hover:underline"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSession(s)}
-                        className="text-sm text-red-600 hover:underline"
-                      >
-                        Borrar
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </section>
+                <button type="button" onClick={cancelSessionForm} className="btn-secondary">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          )}
+
+          {pastSessions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowPastSessions((v) => !v)}
+              className="text-sm text-gray-600 hover:underline mb-2"
+            >
+              {showPastSessions
+                ? 'Ocultar las pasadas'
+                : `Mostrar también las pasadas (${pastSessions.length})`}
+            </button>
+          )}
+
+          {visibleSessions.length === 0 ? (
+            <EmptyState
+              icon={CalendarClock}
+              title={sessions.length === 0 ? 'Sin sesiones planificadas' : 'Sin próximas sesiones'}
+              description="Define el horario semanal arriba para generar todas las clases del curso, o crea una sesión suelta."
+              action={
+                !showSessionForm && (
+                  <button className="btn-primary" onClick={startCreateSession}>
+                    + Nueva sesión
+                  </button>
+                )
+              }
+            />
+          ) : (
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="text-left border-b text-gray-500">
+                  <th className="py-2 font-medium">Fecha</th>
+                  <th className="py-2 font-medium">Profesor</th>
+                  <th className="py-2 font-medium">Estado</th>
+                  <th className="py-2 font-medium">Notas</th>
+                  <th className="py-2 font-medium text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleSessions.map((s) => {
+                  const t = s.teacherId ? teacherById[s.teacherId] : null;
+                  const end = new Date(
+                    new Date(s.scheduledAt).getTime() +
+                      (s.durationMinutes ?? DEFAULT_DURATION) * 60_000,
+                  );
+                  return (
+                    <tr key={s.id} className="border-b hover:bg-gray-50">
+                      <td className="py-2">
+                        <Link href={`/sessions/${s.id}`} className="hover:underline">
+                          {formatDateTime(s.scheduledAt)}
+                        </Link>
+                        <span className="text-gray-400"> – {formatTime(end)}</span>
+                      </td>
+                      <td className="py-2 text-gray-600">
+                        {t ? `${t.firstName} ${t.lastName}` : '—'}
+                      </td>
+                      <td className="py-2">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded ${SESSION_STATUS_STYLE[s.status]}`}
+                        >
+                          {SESSION_STATUS_LABEL[s.status]}
+                          {s.cancelledByHolidayId && ' (día sin clase)'}
+                        </span>
+                      </td>
+                      <td className="py-2 text-gray-600 max-w-xs truncate">{s.notes ?? '—'}</td>
+                      <td className="py-2 text-right space-x-3">
+                        <button
+                          onClick={() => startEditSession(s)}
+                          className="text-sm hover:underline"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSession(s)}
+                          className="text-sm text-red-600 hover:underline"
+                        >
+                          Borrar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </section>
+      )}
     </div>
   );
 }
