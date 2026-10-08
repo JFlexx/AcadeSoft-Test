@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { GraduationCap, LayoutGrid, Search, User, Users2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { norm } from '@/components/list-controls';
 
 type Item = { kind: 'page' | 'student' | 'teacher' | 'group'; label: string; hint?: string; href: string };
 type Person = { id: string; firstName: string; lastName: string; email: string | null };
@@ -11,13 +12,6 @@ type Group = { id: string; name: string };
 
 const ICON = { page: LayoutGrid, student: User, teacher: GraduationCap, group: Users2 };
 const KIND_LABEL = { page: 'Ir a', student: 'Alumno', teacher: 'Profesor', group: 'Grupo' };
-
-/** Lower-case, accent-free, so "lucia" finds "Lucía". */
-const norm = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
 
 /**
  * Global search (Ctrl/⌘+K): jump to a page, student, teacher or group.
