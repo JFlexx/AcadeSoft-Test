@@ -7,6 +7,7 @@ import { api, ApiError } from '@/lib/api';
 import { HolidaysPanel } from '@/components/holidays-panel';
 import { RoomsPanel } from '@/components/rooms-panel';
 import { TeamPanel } from '@/components/team-panel';
+import { Tabs, useTab } from '@/components/tabs';
 import { useAuth } from '@/lib/auth-context';
 
 type Settings = {
@@ -29,6 +30,15 @@ type Settings = {
   prorateNewEnrollments: boolean;
   emailConfigured: boolean;
 };
+
+const TABS = [
+  { key: 'academy', label: 'Academia' },
+  { key: 'automation', label: 'Automatizaciones' },
+  { key: 'calendar', label: 'Festivos y aulas' },
+  { key: 'team', label: 'Equipo' },
+] as const;
+type TabKey = (typeof TABS)[number]['key'];
+const TAB_KEYS = TABS.map((t) => t.key);
 
 type FormState = {
   name: string;
@@ -83,6 +93,7 @@ export default function SettingsPage() {
   const [trialClasses, setTrialClasses] = useState(false);
   const [prorate, setProrate] = useState(false);
   const [emailConfigured, setEmailConfigured] = useState(false);
+  const [tab, setTab] = useTab<TabKey>(TAB_KEYS, 'academy');
 
   function applyAuto(data: Settings) {
     setAutoBilling(data.autoBillingEnabled);
@@ -174,19 +185,18 @@ export default function SettingsPage() {
       <header className="mb-4">
         <h1 className="text-xl font-semibold">Ajustes de la academia</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Estos datos aparecen en las facturas y se usan para domiciliaciones
-          SEPA.
+          Datos de la academia, qué se hace solo y quién tiene acceso.
         </p>
       </header>
 
-      {slug && (
+      <Tabs tabs={[...TABS]} value={tab} onChange={setTab} />
+
+      {tab === 'academy' && slug && (
         <div className="border rounded-lg p-4 bg-brand-50/50 mb-6">
-          <p className="text-sm font-medium text-gray-800">
-            Enlace de inscripción online
-          </p>
+          <p className="text-sm font-medium text-gray-800">Enlace de inscripción online</p>
           <p className="text-xs text-gray-500 mt-1 mb-2">
-            Compártelo para que las familias se inscriban solas. Las solicitudes
-            llegan como inscripciones pendientes de revisar.
+            Compártelo para que las familias se inscriban solas. Las solicitudes llegan como
+            inscripciones pendientes de revisar.
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 text-xs bg-white border rounded px-2 py-1.5 truncate">
@@ -195,9 +205,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => {
-                navigator.clipboard.writeText(
-                  `${window.location.origin}/enroll/${slug}`,
-                );
+                navigator.clipboard.writeText(`${window.location.origin}/enroll/${slug}`);
                 toast.success('Enlace copiado');
               }}
               className="btn-secondary shrink-0"
@@ -209,242 +217,245 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <section className="border rounded-lg p-4 bg-white space-y-3">
-          <h2 className="font-medium text-sm text-gray-700">Identidad</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label="Nombre comercial"
-              value={form.name}
-              onChange={(v) => set('name', v)}
-            />
-            <Field
-              label="Razón social"
-              value={form.legalName}
-              onChange={(v) => set('legalName', v)}
-            />
-            <Field
-              label="CIF / NIF"
-              value={form.taxId}
-              onChange={(v) => set('taxId', v)}
-            />
-            <Field
-              label="Prefijo de factura"
-              value={form.invoicePrefix}
-              onChange={(v) => set('invoicePrefix', v)}
-              placeholder="F"
-            />
-            <Field
-              label="Dirección"
-              value={form.address}
-              onChange={(v) => set('address', v)}
-              full
-            />
-          </div>
-        </section>
+      {(tab === 'academy' || tab === 'automation') && (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {tab === 'academy' && (
+            <>
+              <p className="text-sm text-gray-600 -mb-2">
+                Estos datos aparecen en las facturas y se usan para las domiciliaciones SEPA.
+              </p>
+              <section className="border rounded-lg p-4 bg-white space-y-3">
+                <h2 className="font-medium text-sm text-gray-700">Identidad</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field
+                    label="Nombre comercial"
+                    value={form.name}
+                    onChange={(v) => set('name', v)}
+                  />
+                  <Field
+                    label="Razón social"
+                    value={form.legalName}
+                    onChange={(v) => set('legalName', v)}
+                  />
+                  <Field label="CIF / NIF" value={form.taxId} onChange={(v) => set('taxId', v)} />
+                  <Field
+                    label="Prefijo de factura"
+                    value={form.invoicePrefix}
+                    onChange={(v) => set('invoicePrefix', v)}
+                    placeholder="F"
+                  />
+                  <Field
+                    label="Dirección"
+                    value={form.address}
+                    onChange={(v) => set('address', v)}
+                    full
+                  />
+                </div>
+              </section>
 
-        <section className="border rounded-lg p-4 bg-white space-y-3">
-          <h2 className="font-medium text-sm text-gray-700">Contacto</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label="Email de contacto"
-              type="email"
-              value={form.contactEmail}
-              onChange={(v) => set('contactEmail', v)}
-            />
-            <Field
-              label="Teléfono"
-              value={form.contactPhone}
-              onChange={(v) => set('contactPhone', v)}
-            />
-          </div>
-        </section>
+              <section className="border rounded-lg p-4 bg-white space-y-3">
+                <h2 className="font-medium text-sm text-gray-700">Contacto</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field
+                    label="Email de contacto"
+                    type="email"
+                    value={form.contactEmail}
+                    onChange={(v) => set('contactEmail', v)}
+                  />
+                  <Field
+                    label="Teléfono"
+                    value={form.contactPhone}
+                    onChange={(v) => set('contactPhone', v)}
+                  />
+                </div>
+              </section>
 
-        <section className="border rounded-lg p-4 bg-white space-y-3">
-          <h2 className="font-medium text-sm text-gray-700">
-            Datos bancarios (SEPA)
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label="IBAN"
-              value={form.iban}
-              onChange={(v) => set('iban', v)}
-              placeholder="ES…"
-            />
-            <Field
-              label="Identificador de acreedor SEPA"
-              value={form.sepaCreditorId}
-              onChange={(v) => set('sepaCreditorId', v)}
-              placeholder="ES…ZZZ…"
-            />
-          </div>
-          <p className="text-xs text-gray-500">
-            El identificador de acreedor lo proporciona tu banco. Necesario para
-            generar remesas de domiciliación.
-          </p>
-        </section>
+              <section className="border rounded-lg p-4 bg-white space-y-3">
+                <h2 className="font-medium text-sm text-gray-700">Datos bancarios (SEPA)</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field
+                    label="IBAN"
+                    value={form.iban}
+                    onChange={(v) => set('iban', v)}
+                    placeholder="ES…"
+                  />
+                  <Field
+                    label="Identificador de acreedor SEPA"
+                    value={form.sepaCreditorId}
+                    onChange={(v) => set('sepaCreditorId', v)}
+                    placeholder="ES…ZZZ…"
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  El identificador de acreedor lo proporciona tu banco. Necesario para generar
+                  remesas de domiciliación.
+                </p>
+              </section>
+            </>
+          )}
 
-        <section className="border-t pt-5 space-y-3">
-          <h2 className="font-medium">Facturación automática</h2>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={autoBilling}
-              onChange={(e) => {
-                setAutoBilling(e.target.checked);
-                setSavedAt(null);
-              }}
-            />
-            Generar las mensualidades automáticamente cada mes
-          </label>
-          {autoBilling && (
-            <label className="block text-sm">
-              <span className="text-xs text-gray-600 block mb-1">
-                Día del mes (1–28)
+          {tab === 'automation' && (
+            <>
+              <section className="space-y-3">
+                <h2 className="font-medium">Facturación automática</h2>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={autoBilling}
+                    onChange={(e) => {
+                      setAutoBilling(e.target.checked);
+                      setSavedAt(null);
+                    }}
+                  />
+                  Generar las mensualidades automáticamente cada mes
+                </label>
+                {autoBilling && (
+                  <label className="block text-sm">
+                    <span className="text-xs text-gray-600 block mb-1">Día del mes (1–28)</span>
+                    <select
+                      value={autoBillingDay}
+                      onChange={(e) => {
+                        setAutoBillingDay(Number(e.target.value));
+                        setSavedAt(null);
+                      }}
+                      className="border rounded px-2 py-1 text-sm bg-white"
+                    >
+                      {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <p className="text-xs text-gray-500">
+                  Cada mes, el día elegido, se crean las facturas de las inscripciones activas con
+                  cuota (igual que el botón «Generar mensualidades», sin duplicar las que ya
+                  existan). Desactivado por defecto.
+                </p>
+              </section>
+
+              <section className="border-t pt-5 space-y-3">
+                <h2 className="font-medium">Prorrateo de la primera cuota</h2>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={prorate}
+                    onChange={(e) => {
+                      setProrate(e.target.checked);
+                      setSavedAt(null);
+                    }}
+                  />
+                  Si alguien empieza a mitad de mes, cobrar solo la parte que le toca
+                </label>
+                <p className="text-xs text-gray-500">
+                  Se calcula con las clases que quedan en el calendario desde el día de alta (las
+                  canceladas por festivo no cuentan), o por días si el grupo no tiene clases
+                  programadas. La factura explica el cálculo, p. ej. «Prorrateo: 5 de 8 clases del
+                  mes». Desactivado por defecto.
+                </p>
+              </section>
+
+              <section className="border-t pt-5 space-y-3">
+                <h2 className="font-medium">Recordatorios de impago</h2>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={reminders}
+                    onChange={(e) => {
+                      setReminders(e.target.checked);
+                      setSavedAt(null);
+                    }}
+                  />
+                  Enviar un email a la familia cuando una factura venza
+                </label>
+                {reminders && !emailConfigured && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                    El envío de email aún no está configurado: los recordatorios no saldrán hasta
+                    que se añada la clave de Resend en el servidor.
+                  </p>
+                )}
+                <p className="text-xs text-gray-500">
+                  Se avisa a los tutores (o al alumno si no hay tutor) como mucho una vez cada 7
+                  días y un máximo de 3 veces por factura. Desactivado por defecto.
+                </p>
+              </section>
+
+              <section className="border-t pt-5 space-y-3">
+                <h2 className="font-medium">Clases de prueba</h2>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={trialClasses}
+                    onChange={(e) => {
+                      setTrialClasses(e.target.checked);
+                      setSavedAt(null);
+                    }}
+                  />
+                  Permitir reservar una clase de prueba gratis desde la página de inscripción
+                </label>
+                <p className="text-xs text-gray-500">
+                  La familia elige uno de los próximos días de clase del grupo (desde 2 horas hasta
+                  30 días antes, máximo 3 pruebas por clase y solo en grupos con plazas) y recibe la
+                  confirmación por email. Las ves en «Clases de prueba». Desactivado por defecto.
+                </p>
+              </section>
+
+              <section className="border-t pt-5 space-y-3">
+                <h2 className="font-medium">Avisos de falta de asistencia</h2>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={absenceNotices}
+                    onChange={(e) => {
+                      setAbsenceNotices(e.target.checked);
+                      setSavedAt(null);
+                    }}
+                  />
+                  Enviar un email a la familia cuando se marque una falta
+                </label>
+                {absenceNotices && !emailConfigured && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                    El envío de email aún no está configurado: los avisos no saldrán hasta que se
+                    añada la clave de Resend en el servidor.
+                  </p>
+                )}
+                <p className="text-xs text-gray-500">
+                  Al pasar lista (el profesor desde el móvil o desde aquí), la familia recibe el
+                  aviso en el momento: uno por falta y solo para clases de las últimas 24 horas. Las
+                  respuestas llegan al email de contacto de la academia. Desactivado por defecto.
+                </p>
+              </section>
+            </>
+          )}
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
+          <div className="flex items-center gap-3">
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+            {savedAt && !saving && (
+              <span className="text-xs text-green-700">
+                Guardado {savedAt.toLocaleTimeString('es-ES')}
               </span>
-              <select
-                value={autoBillingDay}
-                onChange={(e) => {
-                  setAutoBillingDay(Number(e.target.value));
-                  setSavedAt(null);
-                }}
-                className="border rounded px-2 py-1 text-sm bg-white"
-              >
-                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <p className="text-xs text-gray-500">
-            Cada mes, el día elegido, se crean las facturas de las inscripciones
-            activas con cuota (igual que el botón «Generar mensualidades», sin
-            duplicar las que ya existan). Desactivado por defecto.
-          </p>
-        </section>
+            )}
+          </div>
+        </form>
+      )}
 
-        <section className="border-t pt-5 space-y-3">
-          <h2 className="font-medium">Prorrateo de la primera cuota</h2>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={prorate}
-              onChange={(e) => {
-                setProrate(e.target.checked);
-                setSavedAt(null);
-              }}
-            />
-            Si alguien empieza a mitad de mes, cobrar solo la parte que le toca
-          </label>
-          <p className="text-xs text-gray-500">
-            Se calcula con las clases que quedan en el calendario desde el día de alta (las
-            canceladas por festivo no cuentan), o por días si el grupo no tiene clases
-            programadas. La factura explica el cálculo, p. ej. «Prorrateo: 5 de 8 clases del
-            mes». Desactivado por defecto.
-          </p>
-        </section>
-
-        <section className="border-t pt-5 space-y-3">
-          <h2 className="font-medium">Recordatorios de impago</h2>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={reminders}
-              onChange={(e) => {
-                setReminders(e.target.checked);
-                setSavedAt(null);
-              }}
-            />
-            Enviar un email a la familia cuando una factura venza
-          </label>
-          {reminders && !emailConfigured && (
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-              El envío de email aún no está configurado: los recordatorios no
-              saldrán hasta que se añada la clave de Resend en el servidor.
-            </p>
-          )}
-          <p className="text-xs text-gray-500">
-            Se avisa a los tutores (o al alumno si no hay tutor) como mucho una
-            vez cada 7 días y un máximo de 3 veces por factura. Desactivado por
-            defecto.
-          </p>
-        </section>
-
-        <section className="border-t pt-5 space-y-3">
-          <h2 className="font-medium">Clases de prueba</h2>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={trialClasses}
-              onChange={(e) => {
-                setTrialClasses(e.target.checked);
-                setSavedAt(null);
-              }}
-            />
-            Permitir reservar una clase de prueba gratis desde la página de inscripción
-          </label>
-          <p className="text-xs text-gray-500">
-            La familia elige uno de los próximos días de clase del grupo (desde 2 horas
-            hasta 30 días antes, máximo 3 pruebas por clase y solo en grupos con plazas) y
-            recibe la confirmación por email. Las ves en «Clases de prueba». Desactivado por
-            defecto.
-          </p>
-        </section>
-
-        <section className="border-t pt-5 space-y-3">
-          <h2 className="font-medium">Avisos de falta de asistencia</h2>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={absenceNotices}
-              onChange={(e) => {
-                setAbsenceNotices(e.target.checked);
-                setSavedAt(null);
-              }}
-            />
-            Enviar un email a la familia cuando se marque una falta
-          </label>
-          {absenceNotices && !emailConfigured && (
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-              El envío de email aún no está configurado: los avisos no saldrán
-              hasta que se añada la clave de Resend en el servidor.
-            </p>
-          )}
-          <p className="text-xs text-gray-500">
-            Al pasar lista (el profesor desde el móvil o desde aquí), la familia
-            recibe el aviso en el momento: uno por falta y solo para clases de las
-            últimas 24 horas. Las respuestas llegan al email de contacto de la
-            academia. Desactivado por defecto.
-          </p>
-        </section>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div className="flex items-center gap-3">
-          <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? 'Guardando…' : 'Guardar cambios'}
-          </button>
-          {savedAt && !saving && (
-            <span className="text-xs text-green-700">
-              Guardado {savedAt.toLocaleTimeString('es-ES')}
-            </span>
-          )}
+      {tab === 'calendar' && (
+        <div className="space-y-8">
+          <section>
+            <HolidaysPanel />
+          </section>
+          <section className="border-t pt-5">
+            <RoomsPanel />
+          </section>
         </div>
-      </form>
+      )}
 
-      <section className="border-t pt-5 mt-8">
-        <HolidaysPanel />
-      </section>
-
-      <section className="border-t pt-5 mt-8">
-        <RoomsPanel />
-      </section>
-
-      <section className="border-t pt-5 mt-8">
-        <TeamPanel />
-      </section>
+      {tab === 'team' && <TeamPanel />}
     </div>
   );
 }
@@ -465,7 +476,7 @@ function Field({
   full?: boolean;
 }) {
   return (
-    <label className={`block ${full ? 'col-span-2' : ''}`}>
+    <label className={`block ${full ? 'sm:col-span-2' : ''}`}>
       <span className="text-xs text-gray-600 block mb-1">{label}</span>
       <input
         type={type}

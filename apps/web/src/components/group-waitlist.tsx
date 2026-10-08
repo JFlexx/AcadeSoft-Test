@@ -110,7 +110,7 @@ export function GroupWaitlist({
         {queue.map((e, i) => (
           <li key={e.id} className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm">
             <span className="w-6 text-gray-400 font-medium">{i + 1}.</span>
-            <span className="flex-1 min-w-0">
+            <span className="grow basis-48 min-w-0">
               <span className="block font-medium truncate">{nameOf(e)}</span>
               <span className="block text-xs text-gray-500">
                 En espera desde el {day(e.enrolledAt)}
@@ -120,7 +120,7 @@ export function GroupWaitlist({
               </span>
               {e.notes && <span className="block text-xs text-gray-500 truncate">«{e.notes}»</span>}
             </span>
-            <span className="flex items-center gap-3">
+            <span className="flex items-center gap-3 ml-9 sm:ml-0">
               <button
                 onClick={() => offer(e)}
                 disabled={busy === e.id}
