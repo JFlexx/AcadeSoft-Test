@@ -395,49 +395,263 @@ function WeekView({
   const today = new Date();
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
-      {days.map((day, i) => {
-        const list = byDay.get(dayKey(day)) ?? [];
-        const isToday = isSameDay(day, today);
-        const holiday = holidayFor(day);
-        return (
-          <div
-            key={i}
-            className={`border rounded-lg min-h-[8rem] flex flex-col ${holiday ? 'bg-amber-50' : 'bg-white'}`}
-          >
+    <>
+      <TimeGrid
+        days={days}
+        byDay={byDay}
+        groupById={groupById}
+        colorFor={colorFor}
+        teacherFor={teacherFor}
+        holidayFor={holidayFor}
+        roomFor={roomFor}
+      />
+      <div className="md:hidden grid grid-cols-1 gap-2">
+        {days.map((day, i) => {
+          const list = byDay.get(dayKey(day)) ?? [];
+          const isToday = isSameDay(day, today);
+          const holiday = holidayFor(day);
+          return (
             <div
-              className={`px-2 py-1.5 border-b text-xs font-medium flex items-center justify-between ${
-                isToday ? 'bg-brand-50 text-brand-700' : 'text-gray-600'
-              }`}
+              key={i}
+              className={`border rounded-lg flex flex-col ${holiday ? 'bg-amber-50' : 'bg-white'}`}
             >
-              <span>{WEEKDAYS[i]}</span>
-              <span className={isToday ? 'font-semibold' : ''}>{day.getDate()}</span>
+              <div
+                className={`px-2 py-1.5 border-b text-xs font-medium flex items-center justify-between ${
+                  isToday ? 'bg-brand-50 text-brand-700' : 'text-gray-600'
+                }`}
+              >
+                <span>{WEEKDAYS[i]}</span>
+                <span className={isToday ? 'font-semibold' : ''}>{day.getDate()}</span>
+              </div>
+              {holiday && (
+                <p className="px-2 pt-1 text-[11px] font-medium text-amber-700 truncate" title={holiday}>
+                  {holiday}
+                </p>
+              )}
+              <div className="p-1.5 space-y-1.5 flex-1">
+                {list.length === 0 ? (
+                  <p className="text-[11px] text-gray-400 px-1">Sin clases</p>
+                ) : (
+                  list.map((s) => (
+                    <SessionChip
+                      key={s.id}
+                      session={s}
+                      color={colorFor(s)}
+                      groupName={groupById[s.groupId]?.name ?? 'Grupo'}
+                      teacher={teacherFor(s)}
+                      room={roomFor(s)}
+                    />
+                  ))
+                )}
+              </div>
             </div>
-            {holiday && (
-              <p className="px-2 pt-1 text-[11px] font-medium text-amber-700 truncate" title={holiday}>
-                {holiday}
-              </p>
-            )}
-            <div className="p-1.5 space-y-1.5 flex-1">
-              {list.length === 0 ? (
-                <p className="text-[11px] text-gray-300 px-1 py-2">—</p>
-              ) : (
-                list.map((s) => (
-                  <SessionChip
-                    key={s.id}
-                    session={s}
-                    color={colorFor(s)}
-                    groupName={groupById[s.groupId]?.name ?? 'Grupo'}
-                    teacher={teacherFor(s)}
-                    room={roomFor(s)}
-                  />
-                ))
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ─── week grid (desktop) ────────────────────────────────────────────────────
+
+const HOUR_PX = 56;
+const DEFAULT_HOURS: [number, number] = [9, 21];
+const MIN_SPAN_HOURS = 6;
+
+type Placed = { s: Session; start: number; end: number; lane: number; lanes: number };
+
+const minutesOfDay = (d: Date) => d.getHours() * 60 + d.getMinutes();
+
+/**
+ * Side-by-side lanes for classes that overlap: each cluster of overlapping
+ * classes is split into as many columns as it needs at its busiest.
+ */
+function layoutDay(list: Session[]): Placed[] {
+  const items = list
+    .map((s) => {
+      const start = minutesOfDay(new Date(s.scheduledAt));
+      return { s, start, end: start + (s.durationMinutes ?? DEFAULT_DURATION), lane: 0, lanes: 1 };
+    })
+    .sort((a, b) => a.start - b.start || b.end - a.end);
+  const out: Placed[] = [];
+  let cluster: Placed[] = [];
+  let clusterEnd = -1;
+  const flush = () => {
+    const lanes = Math.max(1, ...cluster.map((c) => c.lane + 1));
+    for (const c of cluster) c.lanes = lanes;
+    cluster = [];
+  };
+  for (const it of items) {
+    if (cluster.length > 0 && it.start >= clusterEnd) flush();
+    let lane = 0;
+    while (cluster.some((c) => c.lane === lane && c.end > it.start)) lane++;
+    it.lane = lane;
+    cluster.push(it);
+    out.push(it);
+    clusterEnd = Math.max(cluster.length === 1 ? -1 : clusterEnd, it.end);
+  }
+  flush();
+  return out;
+}
+
+/** The hours worth showing: from the first class to the last, at least 6 h. */
+function hourRange(lists: Session[][]): [number, number] {
+  const all = lists.flat();
+  if (all.length === 0) return DEFAULT_HOURS;
+  let first = 24 * 60;
+  let last = 0;
+  for (const s of all) {
+    const start = minutesOfDay(new Date(s.scheduledAt));
+    first = Math.min(first, start);
+    last = Math.max(last, start + (s.durationMinutes ?? DEFAULT_DURATION));
+  }
+  const from = Math.floor(first / 60);
+  const to = Math.min(24, Math.max(Math.ceil(last / 60), from + MIN_SPAN_HOURS));
+  return [Math.max(0, Math.min(from, to - MIN_SPAN_HOURS)), to];
+}
+
+function TimeGrid({
+  days,
+  byDay,
+  groupById,
+  colorFor,
+  teacherFor,
+  holidayFor,
+  roomFor,
+}: {
+  days: Date[];
+  byDay: Map<string, Session[]>;
+  groupById: Record<string, Group>;
+  colorFor: (s: Session) => string;
+  teacherFor: (s: Session) => string | null;
+  holidayFor: (day: Date) => string | null;
+  roomFor: (s: Session) => string | null;
+}) {
+  const lists = days.map((d) => byDay.get(dayKey(d)) ?? []);
+  const [from, to] = hourRange(lists);
+  const hours = Array.from({ length: to - from }, (_, i) => from + i);
+  const height = (to - from) * HOUR_PX;
+  const now = new Date();
+  const nowMin = minutesOfDay(now);
+
+  return (
+    <div className="hidden md:block border rounded-lg bg-white overflow-hidden">
+      {/* Day headers */}
+      <div className="grid grid-cols-[3rem_repeat(7,minmax(0,1fr))] border-b">
+        <div />
+        {days.map((day, i) => {
+          const isToday = isSameDay(day, now);
+          const holiday = holidayFor(day);
+          return (
+            <div
+              key={i}
+              className={`px-2 py-1.5 border-l text-xs ${isToday ? 'bg-brand-50 text-brand-700' : 'text-gray-600'}`}
+            >
+              <span className="font-medium">{WEEKDAYS[i]}</span>{' '}
+              <span className={isToday ? 'font-semibold' : ''}>{day.getDate()}</span>
+              {holiday && (
+                <span className="block truncate text-[11px] font-medium text-amber-700" title={holiday}>
+                  {holiday}
+                </span>
               )}
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      {/* Hours × days */}
+      <div className="grid grid-cols-[3rem_repeat(7,minmax(0,1fr))]" style={{ height }}>
+        <div className="relative">
+          {hours.map((h, i) => (
+            <span
+              key={h}
+              className="absolute right-1.5 text-[10px] text-gray-400 tabular-nums"
+              style={{ top: i * HOUR_PX + 2 }}
+            >
+              {`${String(h).padStart(2, '0')}:00`}
+            </span>
+          ))}
+        </div>
+        {days.map((day, i) => {
+          const isToday = isSameDay(day, now);
+          return (
+            <div key={i} className={`relative border-l ${holidayFor(day) ? 'bg-amber-50/70' : ''}`}>
+              {hours.map((h, j) => (
+                <div
+                  key={h}
+                  className="absolute inset-x-0 border-t border-gray-100"
+                  style={{ top: j * HOUR_PX }}
+                />
+              ))}
+              {layoutDay(lists[i]).map((p) => (
+                <GridEvent
+                  key={p.s.id}
+                  placed={p}
+                  from={from}
+                  color={colorFor(p.s)}
+                  groupName={groupById[p.s.groupId]?.name ?? 'Grupo'}
+                  teacher={teacherFor(p.s)}
+                  room={roomFor(p.s)}
+                />
+              ))}
+              {isToday && nowMin >= from * 60 && nowMin <= to * 60 && (
+                <div
+                  className="absolute inset-x-0 z-10 border-t-2 border-red-500 pointer-events-none"
+                  style={{ top: ((nowMin - from * 60) / 60) * HOUR_PX }}
+                >
+                  <span className="absolute -left-1 -top-[5px] h-2 w-2 rounded-full bg-red-500" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
+  );
+}
+
+function GridEvent({
+  placed,
+  from,
+  color,
+  groupName,
+  teacher,
+  room,
+}: {
+  placed: Placed;
+  from: number;
+  color: string;
+  groupName: string;
+  teacher: string | null;
+  room: string | null;
+}) {
+  const { s, start, end, lane, lanes } = placed;
+  const top = ((start - from * 60) / 60) * HOUR_PX;
+  const h = Math.max(22, ((end - start) / 60) * HOUR_PX - 2);
+  const cancelled = s.status === 'CANCELLED';
+  const details = [teacher, room].filter(Boolean).join(' · ');
+  return (
+    <Link
+      href={`/sessions/${s.id}`}
+      className={`absolute overflow-hidden rounded px-1.5 py-0.5 text-[11px] leading-tight hover:brightness-95 hover:z-20 transition ${
+        cancelled ? 'opacity-50' : ''
+      }`}
+      style={{
+        top,
+        height: h,
+        left: `calc(${(lane / lanes) * 100}% + 2px)`,
+        width: `calc(${100 / lanes}% - 4px)`,
+        borderLeft: `3px solid ${color}`,
+        backgroundColor: `${color}24`,
+      }}
+      title={`${formatTime(s.scheduledAt)}–${formatTime(sessionEnd(s).toISOString())} · ${groupName}${details ? ` · ${details}` : ''}${cancelled ? ' (cancelada)' : ''}`}
+    >
+      <span className="block text-gray-500 tabular-nums">
+        {formatTime(s.scheduledAt)}–{formatTime(sessionEnd(s).toISOString())}
+      </span>
+      <span className={`block font-medium text-gray-800 truncate ${cancelled ? 'line-through' : ''}`}>{groupName}</span>
+      {h >= 52 && details && <span className="block text-gray-500 truncate">{details}</span>}
+    </Link>
   );
 }
 
