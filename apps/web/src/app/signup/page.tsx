@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { PRODUCT_NAME } from '@/lib/brand';
 
 function slugify(value: string): string {
   return value
@@ -79,7 +80,7 @@ export default function SignupPage() {
         <header>
           <h1 className="text-xl font-semibold">Crea tu academia</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Te creamos tu espacio en AcadeSoft. Podrás configurar el resto
+            Te creamos tu espacio en {PRODUCT_NAME}. Podrás configurar el resto
             después de entrar.
           </p>
         </header>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/lib/auth-context';
+import { PRODUCT_NAME } from '@/lib/brand';
 import './globals.css';
 
 const inter = Inter({
@@ -11,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'AcadeSoft',
+  title: PRODUCT_NAME,
   description: 'Gestión moderna para academias',
 };
 

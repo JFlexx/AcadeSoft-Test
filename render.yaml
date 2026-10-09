@@ -1,0 +1,71 @@
+# Render Blueprint: API + web + PostgreSQL, all in Frankfurt (EU, for GDPR).
+# Step by step in docs/deploy.md ("Desplegar en Render").
+#
+# Values marked `sync: false` are asked for when the Blueprint is created.
+# The web and the API must live under the same registrable domain
+# (app.example.es + api.example.es): the session cookie is sameSite=strict.
+
+databases:
+  - name: acedesoft-db
+    region: frankfurt
+    plan: 0.1c-256mb # smallest paid plan: point-in-time recovery + daily logical backups
+    postgresMajorVersion: '16'
+    databaseName: acedesoft
+    user: acedesoft
+    ipAllowList: [] # private network only
+
+services:
+  - type: web
+    name: acedesoft-api
+    runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
+    branch: main
+    autoDeployTrigger: checksPass # deploy only when CI is green
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    # Readiness: also checks the database. Migrations run when the container
+    # starts (single instance), see the Dockerfile.
+    healthCheckPath: /health/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: acedesoft-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      # https://app.<your domain> — CORS and the links in emails.
+      - key: WEB_ORIGIN
+        sync: false
+      # From Resend, once the domain is verified there.
+      - key: RESEND_API_KEY
+        sync: false
+      # e.g. "Nombre <hola@<your domain>>"
+      - key: EMAIL_FROM
+        sync: false
+
+  - type: web
+    name: acedesoft-web
+    runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
+    branch: main
+    autoDeployTrigger: checksPass # deploy only when CI is green
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    healthCheckPath: /login
+    envVars:
+      # https://api.<your domain>. Render passes it to the Docker build as a
+      # build argument; changing it needs a new deploy.
+      - key: NEXT_PUBLIC_API_URL
+        sync: false

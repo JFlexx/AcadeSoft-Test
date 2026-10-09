@@ -1,3 +1,5 @@
+import { PRODUCT_NAME } from './brand';
+
 /**
  * Who provides the platform (the processor of the academies' data and the
  * controller of the academies' own account data). PENDING: fill in with the
@@ -5,7 +7,7 @@
  * reviewed by a lawyer.
  */
 export const PROVIDER = {
-  product: 'AcadeSoft',
+  product: PRODUCT_NAME,
   legalName: '[Razón social del titular]',
   taxId: '[NIF]',
   address: '[Domicilio social]',

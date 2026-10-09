@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { CircleUser, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { homeFor } from '@/lib/home';
+import { PRODUCT_INITIAL } from '@/lib/brand';
 
 export default function PortalLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-brand-600 text-white font-bold text-sm">
-              A
+              {PRODUCT_INITIAL}
             </span>
             <div className="min-w-0">
               <p className="font-semibold leading-tight">Portal de familias</p>
