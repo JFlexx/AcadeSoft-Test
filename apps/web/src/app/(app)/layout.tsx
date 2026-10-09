@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { homeFor, isAdminAppRole } from '@/lib/home';
 import { CommandPalette } from '@/components/command-palette';
+import { PRODUCT_INITIAL, PRODUCT_NAME } from '@/lib/brand';
 
 type NavItem = { href: string; label: string; icon: LucideIcon; adminOnly?: boolean };
 
@@ -127,10 +128,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <div className="px-4 py-4 border-b">
         <div className="flex items-center gap-2">
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-600 text-white font-bold text-sm">
-            A
+            {PRODUCT_INITIAL}
           </span>
           <div className="min-w-0">
-            <p className="font-semibold leading-tight">AcadeSoft</p>
+            <p className="font-semibold leading-tight">{PRODUCT_NAME}</p>
             <p className="text-xs text-gray-500 truncate">{user.tenant.name}</p>
           </div>
         </div>

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { CircleUser, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { homeFor } from '@/lib/home';
+import { PRODUCT_INITIAL } from '@/lib/brand';
 
 /** Mobile-first shell of the teacher app: their classes and attendance only. */
 export default function TeacherLayout({ children }: { children: ReactNode }) {
@@ -40,7 +41,7 @@ export default function TeacherLayout({ children }: { children: ReactNode }) {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <Link href="/teacher" className="flex items-center gap-2 min-w-0">
             <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-600 text-white font-bold text-sm">
-              A
+              {PRODUCT_INITIAL}
             </span>
             <span className="min-w-0">
               <span className="block font-semibold leading-tight truncate">

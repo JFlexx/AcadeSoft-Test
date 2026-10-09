@@ -101,3 +101,36 @@ la web y la API como subdominios. Ese mismo dominio se verifica en Resend para
 La aplicación guarda datos personales de menores y familias. La base de datos
 y la API deben alojarse en la **UE**, con copias de seguridad automáticas de
 PostgreSQL activadas en el proveedor.
+
+## Desplegar en Render (Frankfurt)
+
+El repo trae un *Blueprint* (`render.yaml`) que crea las tres piezas en
+Frankfurt: la base de datos PostgreSQL, la API y la web. Coste orientativo:
+dos servicios de 0,5 CPU / 512 MB y la base de datos más pequeña de pago,
+unos 20 $/mes más el almacenamiento (compruébalo en render.com/pricing).
+La base de datos de pago incluye recuperación a cualquier momento de los
+últimos 3 días (7 con el plan Pro) y copias lógicas diarias exportables.
+
+Antes de empezar hace falta el **dominio** (p. ej. `midominio.es`).
+
+1. **Render → New → Blueprint** y conecta el repositorio de GitHub. Render
+   lee `render.yaml` y pide los valores marcados como `sync: false`:
+   - `WEB_ORIGIN` = `https://app.midominio.es`
+   - `NEXT_PUBLIC_API_URL` = `https://api.midominio.es`
+   - `RESEND_API_KEY` y `EMAIL_FROM` (p. ej. `Nombre <hola@midominio.es>`).
+     Se pueden dejar vacíos al principio: sin clave no se envían emails.
+
+   Los secretos JWT y de cookie los genera Render (256 bits, distintos).
+2. Espera al primer despliegue. La API aplica las migraciones al arrancar.
+3. **Dominios propios:** en cada servicio, *Settings → Custom Domains*:
+   `api.midominio.es` en la API y `app.midominio.es` en la web. Render
+   indica el registro `CNAME` que hay que crear en el registrador del
+   dominio. El certificado HTTPS lo pone Render.
+4. **Email:** en Resend, *Domains → Add domain* con `midominio.es` y crea
+   en el registrador los registros DNS que indique (SPF, DKIM). Cuando
+   salga como verificado, pon `RESEND_API_KEY` y `EMAIL_FROM` en la API y
+   redepliega.
+5. Entra en `https://app.midominio.es/signup` y crea la academia.
+
+Cada push a `main` vuelve a desplegar los dos servicios, solo cuando CI está
+en verde (`autoDeployTrigger: checksPass`).
